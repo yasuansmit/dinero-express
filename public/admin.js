@@ -1,8 +1,9 @@
-// admin.js - Panel de Control para la Organizadora
+// admin.js - Panel de Control DINERO EXPRESS
 (function () {
   let adminPin = sessionStorage.getItem('raffle_admin_pin') || '';
   let currentData = null;
   let activeFilter = 'all';
+  let cachedTemplates = {};
 
   // DOM
   const loginModal = document.getElementById('loginModal');
@@ -10,19 +11,25 @@
   const adminPinInput = document.getElementById('adminPinInput');
   const adminPanel = document.getElementById('adminPanel');
 
+  const currentStatusBadge = document.getElementById('currentStatusBadge');
+  const btnSetPreLaunch = document.getElementById('btnSetPreLaunch');
+  const btnSetActive = document.getElementById('btnSetActive');
+
   const statCollected = document.getElementById('statCollected');
   const statPotential = document.getElementById('statPotential');
   const statGoal = document.getElementById('statGoal');
   const statCount = document.getElementById('statCount');
   const statProgress = document.getElementById('statProgress');
-  const headerSub = document.getElementById('headerSub');
 
   const tabBtnBuyers = document.getElementById('tabBtnBuyers');
+  const tabBtnWhatsApp = document.getElementById('tabBtnWhatsApp');
+  const tabBtnLottery = document.getElementById('tabBtnLottery');
   const tabBtnConfig = document.getElementById('tabBtnConfig');
-  const tabBtnDraw = document.getElementById('tabBtnDraw');
+
   const sectionBuyers = document.getElementById('sectionBuyers');
+  const sectionWhatsApp = document.getElementById('sectionWhatsApp');
+  const sectionLottery = document.getElementById('sectionLottery');
   const sectionConfig = document.getElementById('sectionConfig');
-  const sectionDraw = document.getElementById('sectionDraw');
 
   const searchBuyer = document.getElementById('searchBuyer');
   const buyersTableBody = document.getElementById('buyersTableBody');
@@ -34,18 +41,32 @@
   const configForm = document.getElementById('configForm');
   const cfgName = document.getElementById('cfgName');
   const cfgPrize = document.getElementById('cfgPrize');
+  const cfgLottery = document.getElementById('cfgLottery');
   const cfgPrice = document.getElementById('cfgPrice');
   const cfgNequi = document.getElementById('cfgNequi');
   const cfgPin = document.getElementById('cfgPin');
   const btnResetRaffle = document.getElementById('btnResetRaffle');
-  const btnShareWhatsApp = document.getElementById('btnShareWhatsApp');
   const btnExportCSV = document.getElementById('btnExportCSV');
 
-  const btnRunDraw = document.getElementById('btnRunDraw');
-  const winnerBox = document.getElementById('winnerBox');
-  const winnerNumber = document.getElementById('winnerNumber');
-  const winnerBuyer = document.getElementById('winnerBuyer');
-  const winnerPhone = document.getElementById('winnerPhone');
+  // Lotería Chontico
+  const lotteryInputNumber = document.getElementById('lotteryInputNumber');
+  const btnDeclareLotteryWinner = document.getElementById('btnDeclareLotteryWinner');
+  const lotteryResultCard = document.getElementById('lotteryResultCard');
+
+  // Plantillas WA
+  const templatePreLaunch = document.getElementById('templatePreLaunch');
+  const templateActive = document.getElementById('templateActive');
+  const templateRemaining = document.getElementById('templateRemaining');
+  const templateWinner = document.getElementById('templateWinner');
+
+  // Modal Comprobante
+  const proofViewModal = document.getElementById('proofViewModal');
+  const proofModalImg = document.getElementById('proofModalImg');
+  const proofModalTitle = document.getElementById('proofModalTitle');
+  const btnCloseProofViewModal = document.getElementById('btnCloseProofViewModal');
+  const btnCloseProofViewBtn = document.getElementById('btnCloseProofViewBtn');
+  const btnProofApprove = document.getElementById('btnProofApprove');
+  let currentViewingProofNum = null;
 
   const themeToggle = document.getElementById('themeToggleAdmin');
   const toastBox = document.getElementById('toastBox');
@@ -102,6 +123,7 @@
         loginModal.style.display = 'none';
         adminPanel.style.display = 'block';
         loadAdminData();
+        loadWhatsAppTemplates();
         connectSSE();
       } else {
         showToast('PIN incorrecto. Intenta de nuevo.', 'error');
@@ -123,6 +145,7 @@
         loginModal.style.display = 'none';
         adminPanel.style.display = 'block';
         loadAdminData();
+        loadWhatsAppTemplates();
         connectSSE();
       } else {
         sessionStorage.removeItem('raffle_admin_pin');
@@ -143,10 +166,25 @@
       }
       currentData = await res.json();
       renderStats();
+      renderStatusBadge();
       renderBuyers();
       fillConfigForm();
+      loadWhatsAppTemplates();
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  function renderStatusBadge() {
+    if (!currentData) return;
+    const s = currentData.config.raffleStatus || 'active';
+    currentStatusBadge.className = `status-pill ${s}`;
+    if (s === 'pre_launch') {
+      currentStatusBadge.textContent = '⏸️ En Espera (Pre-Lanzamiento)';
+    } else if (s === 'active') {
+      currentStatusBadge.textContent = '🟢 Abierta para Ventas';
+    } else if (s === 'finished') {
+      currentStatusBadge.textContent = '🏁 Rifa Finalizada / Jugada';
     }
   }
 
@@ -159,8 +197,6 @@
     statGoal.textContent = formatCOP(stats.totalGoal);
     statCount.textContent = `${stats.paid} / ${config.totalNumbers} (${stats.percentPaid}%)`;
     statProgress.style.width = `${stats.percentPaid}%`;
-
-    headerSub.textContent = `${config.name} · Premio: ${config.prize}`;
   }
 
   function fillConfigForm() {
@@ -168,6 +204,7 @@
     const { config } = currentData;
     cfgName.value = config.name;
     cfgPrize.value = config.prize;
+    cfgLottery.value = config.lotteryName || 'Lotería Chontico Día y Noche';
     cfgPrice.value = config.price;
     cfgNequi.value = config.nequi;
     cfgPin.value = adminPin;
@@ -221,7 +258,7 @@
         timeNotice = `<div style="font-size:0.75rem; color:#d97706; font-weight:700;">Expira en ${m}:${String(s).padStart(2, '0')}</div>`;
       }
 
-      const waMsg = `Hola ${b.name}, te escribo de la rifa "${currentData.config.name}" por tu número ${numFormatted}.`;
+      const waMsg = `Hola ${b.name}, te escribo de DINERO EXPRESS por tu boleta ${numFormatted} con la Lotería Chontico.`;
       const waUrl = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(waMsg)}`;
 
       return `
@@ -254,15 +291,7 @@
     })[m]);
   }
 
-  // Modal de Comprobante
-  const proofViewModal = document.getElementById('proofViewModal');
-  const proofModalImg = document.getElementById('proofModalImg');
-  const proofModalTitle = document.getElementById('proofModalTitle');
-  const btnCloseProofViewModal = document.getElementById('btnCloseProofViewModal');
-  const btnCloseProofViewBtn = document.getElementById('btnCloseProofViewBtn');
-  const btnProofApprove = document.getElementById('btnProofApprove');
-  let currentViewingProofNum = null;
-
+  // Comprobante
   window.viewProof = function(url, num, name) {
     currentViewingProofNum = num;
     proofModalImg.src = url;
@@ -306,8 +335,126 @@
     }
   };
 
-  searchBuyer.addEventListener('input', renderBuyers);
+  // Cambiar Estado de la Rifa
+  async function updateRaffleStatus(newStatus) {
+    try {
+      const res = await fetch('/api/admin/set-raffle-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-pin': adminPin
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        showToast(`Estado cambiado a: ${newStatus === 'active' ? 'Abierta para Ventas' : 'En Espera (Pre-Lanzamiento)'}`, 'success');
+        loadAdminData();
+      }
+    } catch {
+      showToast('Error al cambiar estado.', 'error');
+    }
+  }
 
+  btnSetPreLaunch.addEventListener('click', () => {
+    if (confirm('¿Poner la rifa en modo Pre-Lanzamiento? Los participantes verán la información pero NO podrán comprar números todavía.')) {
+      updateRaffleStatus('pre_launch');
+    }
+  });
+
+  btnSetActive.addEventListener('click', () => {
+    if (confirm('¿Abrir las ventas ahora mismo? Todos los participantes podrán escoger y apartar sus números de inmediato.')) {
+      updateRaffleStatus('active');
+    }
+  });
+
+  // Cargar Plantillas de WhatsApp
+  async function loadWhatsAppTemplates() {
+    try {
+      const res = await fetch('/api/admin/whatsapp-templates', {
+        headers: { 'x-admin-pin': adminPin }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      cachedTemplates = data.templates || {};
+
+      templatePreLaunch.textContent = cachedTemplates.preLaunch || '';
+      templateActive.textContent = cachedTemplates.active || '';
+      templateRemaining.textContent = cachedTemplates.remaining || '';
+      templateWinner.textContent = cachedTemplates.winner || '';
+    } catch {}
+  }
+
+  window.copyTemplate = async function(key) {
+    const text = cachedTemplates[key];
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('¡Mensaje copiado! Pégalo en tu grupo de WhatsApp.', 'success');
+    } catch {
+      prompt('Copia este mensaje:', text);
+    }
+  };
+
+  // Registrar Ganador de Lotería Chontico
+  btnDeclareLotteryWinner.addEventListener('click', async () => {
+    const rawNumber = (lotteryInputNumber.value || '').trim();
+    if (!rawNumber) {
+      showToast('Escribe el número de la lotería.', 'error');
+      return;
+    }
+
+    if (!confirm(`¿Confirmas que el resultado de la Lotería Chontico fue ${rawNumber}?`)) return;
+
+    btnDeclareLotteryWinner.disabled = true;
+    btnDeclareLotteryWinner.textContent = 'Comprobando...';
+
+    try {
+      const res = await fetch('/api/admin/set-lottery-winner', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-pin': adminPin
+        },
+        body: JSON.stringify({ rawNumber })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || 'Error al registrar resultado.', 'error');
+        return;
+      }
+
+      lotteryResultCard.style.display = 'block';
+      lotteryResultCard.innerHTML = `
+        <div style="font-size: 1.1rem; font-weight: 800; color: #10b981; margin-bottom: 6px;">
+          🎉 ¡Resultado Oficial Lotería Chontico: ${data.lotteryDrawn}!
+        </div>
+        <div style="font-size: 0.95rem;">
+          Número ganador en boleta: <strong style="font-size: 1.25rem; color: var(--nequi-pink);">${data.targetNum}</strong>
+        </div>
+        <div style="font-size: 1rem; margin-top: 4px;">
+          Afortunado(a): <strong>${escapeHtml(data.winnerName)}</strong>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">
+          Celular: ${escapeHtml(data.winnerPhone || 'Sin celular')} · Estado de Boleta: <strong>${data.ticketStatus.toUpperCase()}</strong>
+        </div>
+        <button class="btn-proceed" onclick="copyTemplate('winner')" style="margin-top: 10px; padding: 8px 14px; font-size: 0.85rem;">
+          📋 Copiar Mensaje de Felicitación para WhatsApp
+        </button>
+      `;
+
+      showToast(`¡Ganador registrado: Número ${data.targetNum}!`, 'success');
+      loadAdminData();
+    } catch {
+      showToast('Error de conexión.', 'error');
+    } finally {
+      btnDeclareLotteryWinner.disabled = false;
+      btnDeclareLotteryWinner.textContent = '🎯 Comprobar';
+    }
+  });
+
+  // Filtros
+  searchBuyer.addEventListener('input', renderBuyers);
   chipFilters.forEach(btn => {
     btn.addEventListener('click', () => {
       chipFilters.forEach(b => b.classList.remove('active'));
@@ -319,26 +466,31 @@
 
   // Pestañas
   function showTab(tab) {
-    [tabBtnBuyers, tabBtnConfig, tabBtnDraw].forEach(b => b.classList.remove('active'));
-    [sectionBuyers, sectionConfig, sectionDraw].forEach(s => s.style.display = 'none');
+    [tabBtnBuyers, tabBtnWhatsApp, tabBtnLottery, tabBtnConfig].forEach(b => b.classList.remove('active'));
+    [sectionBuyers, sectionWhatsApp, sectionLottery, sectionConfig].forEach(s => s.style.display = 'none');
 
     if (tab === 'buyers') {
       tabBtnBuyers.classList.add('active');
       sectionBuyers.style.display = 'block';
+    } else if (tab === 'whatsapp') {
+      tabBtnWhatsApp.classList.add('active');
+      sectionWhatsApp.style.display = 'block';
+      loadWhatsAppTemplates();
+    } else if (tab === 'lottery') {
+      tabBtnLottery.classList.add('active');
+      sectionLottery.style.display = 'block';
     } else if (tab === 'config') {
       tabBtnConfig.classList.add('active');
       sectionConfig.style.display = 'block';
-    } else if (tab === 'draw') {
-      tabBtnDraw.classList.add('active');
-      sectionDraw.style.display = 'block';
     }
   }
 
   tabBtnBuyers.addEventListener('click', () => showTab('buyers'));
+  tabBtnWhatsApp.addEventListener('click', () => showTab('whatsapp'));
+  tabBtnLottery.addEventListener('click', () => showTab('lottery'));
   tabBtnConfig.addEventListener('click', () => showTab('config'));
-  tabBtnDraw.addEventListener('click', () => showTab('draw'));
 
-  // Exportar a Excel (CSV)
+  // Exportar Excel (CSV)
   btnExportCSV.addEventListener('click', () => {
     window.location.href = `/api/admin/export-csv?pin=${encodeURIComponent(adminPin)}`;
     showToast('Descargando archivo Excel...', 'success');
@@ -350,6 +502,7 @@
     const newConfig = {
       name: cfgName.value.trim(),
       prize: cfgPrize.value.trim(),
+      lottery_name: cfgLottery.value.trim(),
       price: parseInt(cfgPrice.value, 10),
       nequi: cfgNequi.value.trim(),
       admin_pin: cfgPin.value.trim()
@@ -368,59 +521,13 @@
       if (res.ok) {
         adminPin = newConfig.admin_pin;
         sessionStorage.setItem('raffle_admin_pin', adminPin);
-        showToast('¡Configuración guardada correctamente!', 'success');
+        showToast('¡Configuración de DINERO EXPRESS guardada!', 'success');
         loadAdminData();
       } else {
         showToast('Error al guardar.', 'error');
       }
     } catch {
       showToast('Error de conexión.', 'error');
-    }
-  });
-
-  // Sorteo Digital
-  btnRunDraw.addEventListener('click', async () => {
-    if (!confirm('¿Deseas realizar el sorteo digital ahora mismo entre las boletas pagadas?')) return;
-
-    btnRunDraw.disabled = true;
-    btnRunDraw.textContent = '🎰 Girando ruleta...';
-
-    try {
-      const res = await fetch('/api/admin/draw-winner', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-pin': adminPin
-        }
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        showToast(data.error || 'No se pudo realizar el sorteo.', 'error');
-        return;
-      }
-
-      // Animación de números antes de mostrar el ganador
-      winnerBox.style.display = 'block';
-      let ticks = 0;
-      const interval = setInterval(() => {
-        winnerNumber.textContent = String(Math.floor(Math.random() * 100) + 1).padStart(2, '0');
-        ticks++;
-        if (ticks > 20) {
-          clearInterval(interval);
-          const w = data.winner;
-          winnerNumber.textContent = String(w.num).padStart(2, '0');
-          winnerBuyer.textContent = `Ganador(a): ${w.name}`;
-          winnerPhone.textContent = `Celular: ${w.phone}`;
-          showToast(`¡Tenemos ganador! Número ${w.num} 🎉`, 'success');
-        }
-      }, 70);
-
-    } catch {
-      showToast('Error de conexión.', 'error');
-    } finally {
-      btnRunDraw.disabled = false;
-      btnRunDraw.textContent = '🎰 Girar de Nuevo';
     }
   });
 
@@ -440,33 +547,11 @@
       });
       if (res.ok) {
         showToast('Rifa reiniciada por completo.', 'success');
-        winnerBox.style.display = 'none';
+        lotteryResultCard.style.display = 'none';
         loadAdminData();
       }
     } catch {
       showToast('Error de conexión.', 'error');
-    }
-  });
-
-  // Compartir en WhatsApp
-  btnShareWhatsApp.addEventListener('click', async () => {
-    if (!currentData) return;
-    const { config, stats } = currentData;
-    const url = window.location.origin;
-
-    const shareText = `🎟️ *¡GRAN RIFA ${config.name.toUpperCase()}!* 🎟️\n\n` +
-      `🏆 *Premio:* ${config.prize}\n` +
-      `💵 *Valor por número:* ${formatCOP(config.price)} COP\n` +
-      `📱 *Pago por Nequi:* ${config.nequi}\n` +
-      `⚡ *Disponibles:* ${stats.free} números restantes\n\n` +
-      `👉 *Escoge y reserva tu número aquí en vivo:*\n${url}\n\n` +
-      `_(La reserva dura 20 min mientras envías el comprobante)_`;
-
-    try {
-      await navigator.clipboard.writeText(shareText);
-      showToast('¡Texto promocional copiado para WhatsApp! 📋', 'success');
-    } catch {
-      prompt('Copia este mensaje para el grupo de WhatsApp:', shareText);
     }
   });
 
@@ -476,6 +561,8 @@
     es.addEventListener('numbers_released', () => loadAdminData());
     es.addEventListener('config_updated', () => loadAdminData());
     es.addEventListener('raffle_reset', () => loadAdminData());
+    es.addEventListener('raffle_status_changed', () => loadAdminData());
+    es.addEventListener('winner_announced', () => loadAdminData());
   }
 
   setInterval(() => {

@@ -4,11 +4,104 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#20002c">
-  <title>Gran Rifa Digital · Escoge tu número</title>
+  <title>DINERO EXPRESS · Sorteo Progresivo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Estilos especiales para el Sorteo Progresivo Dinero Express */
+    .flyer-thumbnail-card {
+      position: relative;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      cursor: pointer;
+      margin-bottom: 14px;
+      border: 1.5px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      max-height: 200px;
+    }
+    .flyer-thumbnail-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+    .flyer-thumbnail-card:hover img {
+      transform: scale(1.03);
+    }
+    .flyer-badge-overlay {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(32, 0, 44, 0.85);
+      backdrop-filter: blur(4px);
+      color: #fde047;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(253, 224, 71, 0.4);
+    }
+    .prizes-accordion {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      margin-bottom: 14px;
+    }
+    .prize-tier {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      font-size: 0.82rem;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+    }
+    .prize-tier:last-child {
+      border-bottom: none;
+    }
+    .prize-badge {
+      font-weight: 900;
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.72rem;
+    }
+    .banner-status-wait {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #ffffff;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      margin-bottom: 16px;
+      font-weight: 800;
+      font-size: 0.9rem;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+      display: none;
+      animation: pulseAlert 2s infinite;
+    }
+    @keyframes pulseAlert {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.01); }
+      100% { transform: scale(1); }
+    }
+    .banner-winner-official {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      margin-bottom: 16px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+      display: none;
+    }
+    .grid-locked-overlay {
+      pointer-events: none;
+      opacity: 0.55;
+      filter: grayscale(0.5);
+    }
+  </style>
 </head>
 <body>
 
@@ -17,31 +110,64 @@
 
   <div class="container">
     
-    <!-- Hero Banner Fintech Nequi -->
+    <!-- Banner de Estado: En espera antes de iniciar -->
+    <div class="banner-status-wait" id="preLaunchBanner">
+      ⏳ <strong>ATENCIÓN:</strong> La rifa va a iniciar pronto. La organizadora dará la señal en el grupo de WhatsApp para abrir las ventas. ¡Ten listo tu Nequi!
+    </div>
+
+    <!-- Banner de Estado: Ganador Oficial de Lotería -->
+    <div class="banner-winner-official" id="officialWinnerBanner">
+      <div style="font-size: 1.6rem;">🏆 🎊 🎉</div>
+      <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800;">Ganador Oficial Chontico</div>
+      <div style="font-size: 2.8rem; font-weight: 900; letter-spacing: 0.05em;" id="bannerWinnerNum">00</div>
+      <div style="font-size: 1.15rem; font-weight: 800;" id="bannerWinnerName">Comprador</div>
+    </div>
+
+    <!-- Hero Banner Fintech Dinero Express -->
     <header class="hero-card">
       <div class="top-bar-row">
         <div class="badge-live">
           <span class="dot-live"></span>
-          <span>Actualización en Vivo</span>
+          <span id="liveStatusLabel">En Vivo</span>
         </div>
         <button class="theme-toggle-btn" id="themeToggle" title="Modo Claro/Oscuro">🌓</button>
       </div>
 
-      <h1 class="hero-title" id="raffleName">Cargando Rifa...</h1>
-      
-      <!-- Premio -->
-      <div class="prize-banner">
-        <div class="prize-icon">🏆</div>
-        <div>
-          <div class="prize-details-label">Gran Premio</div>
-          <div class="prize-details-val" id="rafflePrize">Cargando detalles...</div>
+      <h1 class="hero-title" id="raffleName">DINERO EXPRESS</h1>
+      <div style="font-size: 0.85rem; color: #fde047; font-weight: 800; margin-bottom: 10px; letter-spacing: 0.03em;">
+        🔥 SORTEO PROGRESIVO · LOTERÍA CHONTICO DÍA Y NOCHE
+      </div>
+
+      <!-- Flyer Thumbnail Oficial -->
+      <div class="flyer-thumbnail-card" id="btnOpenFlyerModal" title="Toca para ver el afiche oficial completo">
+        <img src="/img/dinero-express-flyer.jpg" alt="Afiche Oficial Dinero Express">
+        <div class="flyer-badge-overlay">🔍 Toca para ampliar afiche</div>
+      </div>
+
+      <!-- Tabla de Premios Progresivos -->
+      <div class="prizes-accordion">
+        <div class="prize-tier">
+          <span>🥇 2 Primeras Cifras:</span>
+          <strong style="color: #fde047; font-size: 0.95rem;">$150.000 COP</strong>
+        </div>
+        <div class="prize-tier">
+          <span>🥈 2 Cifras del Medio:</span>
+          <strong style="color: #fde047; font-size: 0.95rem;">$150.000 COP</strong>
+        </div>
+        <div class="prize-tier">
+          <span>🥉 2 Últimas Cifras:</span>
+          <strong style="color: #4ade80; font-size: 1rem;">$400.000 COP</strong>
+        </div>
+        <div class="prize-tier" style="margin-top: 4px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.2);">
+          <span style="font-weight: 800; color: #ffffff;">💰 POZO ACUMULADO:</span>
+          <strong style="color: #fde047; font-size: 1.15rem; font-weight: 900;">$5.000.000</strong>
         </div>
       </div>
 
       <!-- Barra de Progreso y Precio -->
       <div style="margin-bottom: 12px;">
         <div class="progress-meta-row">
-          <span>Boletas Pagadas / Reservadas</span>
+          <span>Boletas Pagadas / Apartadas</span>
           <strong id="progressPctText">0%</strong>
         </div>
         <div class="progress-track">
@@ -52,7 +178,7 @@
       <div class="hero-stats-row">
         <div>
           <div style="font-size: 0.72rem; color: rgba(255,255,255,0.7); text-transform: uppercase; font-weight:700;">Valor por número</div>
-          <div class="hero-price-val" id="rafflePrice">$0 COP</div>
+          <div class="hero-price-val" id="rafflePrice">$12.000 COP</div>
         </div>
         <div style="text-align: right;">
           <div style="font-size: 0.72rem; color: rgba(255,255,255,0.7); text-transform: uppercase; font-weight:700;">Medio de Pago</div>
@@ -100,7 +226,7 @@
     </div>
 
     <!-- Cuadrícula de Números -->
-    <main class="board-card">
+    <main class="board-card" id="boardCard">
       <div class="grid-numbers" id="numbersGrid">
         <!-- Renderizado dinámico -->
       </div>
@@ -108,7 +234,7 @@
 
     <!-- Footer -->
     <footer>
-      <p>Plataforma automatizada para rifas transparentes vía WhatsApp.</p>
+      <p>Dinero Express · Responsabilidad y Confianza · ¡Jugamos unidos, ganamos todos!</p>
       <p style="margin-top: 6px;">
         <a href="admin.html">🔐 Acceso a Panel de Organizadora</a>
       </p>
@@ -159,7 +285,7 @@
         </div>
 
         <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
-          🔒 Tus números quedan bloqueados para ti durante <strong>20 minutos</strong>. Si no envías el comprobante en ese tiempo, el sistema los vuelve a liberar automáticamente.
+          🔒 Tus números quedan bloqueados para ti durante <strong>20 minutos</strong> mientras transfieres por Nequi.
         </p>
 
         <button type="submit" class="btn-proceed" id="btnSubmitReserve" style="width: 100%; justify-content: center; padding: 14px;">
@@ -210,7 +336,7 @@
         <span>Tienes <strong id="countdownTimer">20:00</strong> para transferir antes de que se liberen.</span>
       </div>
 
-      <!-- Sección de Subida de Comprobante Directo -->
+      <!-- Subida de Comprobante -->
       <div style="background: var(--bg-main); border: 1.5px dashed var(--border); border-radius: 14px; padding: 12px; margin-bottom: 12px; text-align: center;">
         <div style="font-size: 0.8rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">
           📸 ¿Ya pagaste? Sube tu captura aquí (Opcional):
@@ -233,6 +359,22 @@
       <p style="text-align: center; font-size: 0.72rem; color: var(--text-muted); margin-top: 10px;">
         Al hacer clic se abrirá tu WhatsApp con el mensaje ya redactado hacia la organizadora.
       </p>
+    </div>
+  </div>
+
+  <!-- Modal 3: Afiche Oficial Completo a Pantalla Completa -->
+  <div class="overlay-wrap" id="flyerModal">
+    <div class="popup-card" style="max-width: 500px; padding: 14px; text-align: center;">
+      <div class="popup-head" style="margin-bottom: 8px;">
+        <h3 style="font-size: 1.1rem; font-weight: 800;">Afiche Oficial Dinero Express</h3>
+        <button class="btn-dismiss" id="btnCloseFlyerModal">&times;</button>
+      </div>
+      <div style="border-radius: 14px; overflow: hidden; margin-bottom: 10px; max-height: 75vh; overflow-y: auto;">
+        <img src="/img/dinero-express-flyer.jpg" alt="Afiche Oficial Dinero Express" style="width: 100%; height: auto; display: block;">
+      </div>
+      <button class="btn-proceed" id="btnCloseFlyerBtn" style="width: 100%; justify-content: center; padding: 10px;">
+        Volver a la Rifa
+      </button>
     </div>
   </div>
 

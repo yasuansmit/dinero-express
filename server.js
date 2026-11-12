@@ -125,10 +125,15 @@ app.get('/api/raffle', (req, res) => {
     config: {
       name: cfg.name,
       prize: cfg.prize,
+      lotteryName: cfg.lottery_name || 'Lotería Chontico',
       price: cfg.price,
       nequi: cfg.nequi,
       totalNumbers: cfg.total_numbers,
-      reserveMinutes: cfg.reserve_minutes
+      reserveMinutes: cfg.reserve_minutes,
+      raffleStatus: cfg.raffle_status || 'active',
+      winningNumber: cfg.winning_number,
+      winnerName: cfg.winner_name,
+      flyerUrl: '/img/dinero-express-flyer.jpg'
     },
     numbers
   });
@@ -137,6 +142,19 @@ app.get('/api/raffle', (req, res) => {
 // Reservar números (atómico, seguro contra condiciones de carrera)
 app.post('/api/reserve', (req, res) => {
   cleanExpiredReservations();
+  const cfg = getConfig();
+
+  // Comprobar estado de la rifa
+  if (cfg.raffle_status === 'pre_launch') {
+    return res.status(400).json({ 
+      error: '⚠️ La rifa DINERO EXPRESS aún no ha iniciado. Espera el aviso de la organizadora en el grupo de WhatsApp para escoger tu número.' 
+    });
+  }
+  if (cfg.raffle_status === 'finished') {
+    return res.status(400).json({ 
+      error: '⚠️ La rifa ya ha cerrado y finalizó su juego con la lotería.' 
+    });
+  }
 
   const { numbers, name, phone } = req.body;
 
@@ -151,7 +169,6 @@ app.post('/api/reserve', (req, res) => {
     return res.status(400).json({ error: 'Por favor ingresa tu nombre y un celular válido.' });
   }
 
-  const cfg = getConfig();
   if (!cfg.nequi) {
     return res.status(400).json({ error: 'La organizadora aún no ha configurado el número de Nequi.' });
   }
@@ -334,10 +351,16 @@ app.get('/api/admin/data', requireAdmin, (req, res) => {
     config: {
       name: cfg.name,
       prize: cfg.prize,
+      lotteryName: cfg.lottery_name || 'Lotería Chontico',
       price: cfg.price,
       nequi: cfg.nequi,
       totalNumbers: cfg.total_numbers,
-      reserveMinutes: cfg.reserve_minutes
+      reserveMinutes: cfg.reserve_minutes,
+      raffleStatus: cfg.raffle_status || 'active',
+      winningNumber: cfg.winning_number,
+      winnerName: cfg.winner_name,
+      winnerPhone: cfg.winner_phone,
+      flyerUrl: '/img/dinero-express-flyer.jpg'
     },
     stats: {
       free: freeCount,
@@ -352,13 +375,136 @@ app.get('/api/admin/data', requireAdmin, (req, res) => {
   });
 });
 
+// Cambiar estado de la rifa (pre_launch, active, finished)
+app.post('/api/admin/set-raffle-status', requireAdmin, (req, res) => {
+  const { status } = req.body;
+  if (!['pre_launch', 'active', 'finished'].includes(status)) {
+    return res.status(400).json({ error: 'Estado no válido' });
+  }
+
+  db.prepare('UPDATE config SET raffle_status = ?, updated_at = ? WHERE id = 1').run(status, Date.now());
+  broadcastEvent('raffle_status_changed', { status });
+  res.json({ success: true, status });
+});
+
+// Registrar resultado oficial de la Lotería Chontico
+app.post('/api/admin/set-lottery-winner', requireAdmin, (req, res) => {
+  let { rawNumber } = req.body;
+  if (!rawNumber) {
+    return res.status(400).json({ error: 'Ingresa el número que cayó en la lotería.' });
+  }
+
+  // Limpiar dígitos
+  const cleanDigits = String(rawNumber).replace(/\D/g, '');
+  if (!cleanDigits) {
+    return res.status(400).json({ error: 'Número inválido.' });
+  }
+
+  // Tomar las 2 últimas cifras para la cuadrícula del 01 al 100
+  let targetNum = parseInt(cleanDigits.slice(-2), 10);
+  if (targetNum === 0) targetNum = 100; // si la rifa va del 1 al 100, 00 suele ser 100
+
+  // Buscar quién tiene ese número
+  const ticket = db.prepare('SELECT * FROM numbers WHERE num = ?').get(targetNum);
+  const cfg = getConfig();
+
+  let winnerName = 'Sin Asignar (Número no comprado)';
+  let winnerPhone = '';
+  let isPaid = false;
+
+  if (ticket && ticket.status !== 'free') {
+    winnerName = ticket.buyer_name || 'Comprador Anónimo';
+    winnerPhone = ticket.buyer_phone || '';
+    isPaid = ticket.status === 'paid';
+  }
+
+  db.prepare(`
+    UPDATE config 
+    SET winning_number = ?, winner_name = ?, winner_phone = ?, raffle_status = 'finished', updated_at = ?
+    WHERE id = 1
+  `).run(String(targetNum).padStart(2, '0'), winnerName, winnerPhone, Date.now());
+
+  broadcastEvent('winner_announced', {
+    winningNumber: String(targetNum).padStart(2, '0'),
+    lotteryDrawn: cleanDigits,
+    winnerName,
+    winnerPhone,
+    isPaid
+  });
+
+  res.json({
+    success: true,
+    targetNum: String(targetNum).padStart(2, '0'),
+    lotteryDrawn: cleanDigits,
+    winnerName,
+    winnerPhone,
+    ticketStatus: ticket ? ticket.status : 'free'
+  });
+});
+
+// Plantillas de mensajes para WhatsApp
+app.get('/api/admin/whatsapp-templates', requireAdmin, (req, res) => {
+  const cfg = getConfig();
+  const origin = req.headers.origin || req.headers.host || '';
+  const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+  const fullUrl = origin.startsWith('http') ? origin : `${protocol}://${origin}`;
+
+  // Obtener números libres
+  const freeRows = db.prepare('SELECT num FROM numbers WHERE status = "free" ORDER BY num ASC').all();
+  const freeCount = freeRows.length;
+  const sampleFree = freeRows.slice(0, 15).map(r => String(r.num).padStart(2, '0')).join(', ');
+  const moreText = freeCount > 15 ? ` y ${freeCount - 15} más...` : '';
+
+  const templates = {
+    // 1. Antes de iniciar
+    preLaunch: `🚨 *¡ATENCIÓN GRUPO! PREPÁRENSE!* 🚨\n\n` +
+      `En contados minutos iniciaremos la gran rifa *${cfg.name.toUpperCase()}* 👑\n\n` +
+      `🏆 *PREMIOS:* ${cfg.prize}\n` +
+      `🎰 *Juega con:* ${cfg.lottery_name}\n` +
+      `💵 *Valor por número:* $${cfg.price.toLocaleString('es-CO')} COP\n` +
+      `📲 *Medio de pago:* Nequi ${cfg.nequi}\n\n` +
+      `👇 Puedes ir abriendo el enlace para tener listo tu número:\n` +
+      `${fullUrl}\n\n` +
+      `_¡Apenas demos la señal podrás escoger y apartar el tuyo!_ ⚡`,
+
+    // 2. Apertura oficial
+    active: `🔥 *¡YA PUEDEN ESCOGER SUS NÚMEROS!* 🔥\n\n` +
+      `Queda formalmente abierta la venta de la rifa *${cfg.name.toUpperCase()}* 🎟️\n\n` +
+      `👉 *Entra ya mismo y escoge tus números en vivo:*\n` +
+      `${fullUrl}\n\n` +
+      `💵 *Valor:* $${cfg.price.toLocaleString('es-CO')} COP por número\n` +
+      `📱 *Nequi:* ${cfg.nequi}\n\n` +
+      `_¡Los números se van en segundos, aparta el tuyo ya!_ 🏃‍♂️💨`,
+
+    // 3. Recordatorio de números restantes
+    remaining: `⚡ *¡ÚLTIMOS ${freeCount} NÚMEROS DISPONIBLES!* ⚡\n\n` +
+      `Aún quedan disponibles estos números de la suerte:\n` +
+      `🎯 *${sampleFree}${moreText}*\n\n` +
+      `👉 *Toca el enlace y aparta el tuyo antes de que se agoten:*\n` +
+      `${fullUrl}\n\n` +
+      `🎰 *Juega con:* ${cfg.lottery_name}\n` +
+      `¡No te quedes por fuera del pozo millonario! 💰`,
+
+    // 4. Anuncio oficial de Ganador
+    winner: `🎉 🏆 *¡TENEMOS GANADOR OFICIAL!* 🏆 🎉\n\n` +
+      `Con el resultado de la *${cfg.lottery_name}*:\n\n` +
+      `🎯 *Número Ganador:* ${cfg.winning_number || 'XX'}\n` +
+      `👤 *Afortunado(a):* ${cfg.winner_name || 'Comprador'}\n\n` +
+      `¡Felicitaciones de parte de todo el equipo de *${cfg.name}*! 👏🥳\n` +
+      `Gracias a todos por participar. *¡Jugamos unidos, ganamos todos!* 🤝✨`
+  };
+
+  res.json({ success: true, templates });
+});
+
 // Actualizar configuración de la rifa
 app.put('/api/admin/config', requireAdmin, (req, res) => {
-  const { name, prize, price, nequi, admin_pin, reserve_minutes } = req.body;
+  const { name, prize, lottery_name, price, nequi, admin_pin, reserve_minutes } = req.body;
 
   const current = getConfig();
   const newName = (name || current.name).trim();
   const newPrize = (prize || current.prize).trim();
+  const newLottery = (lottery_name || current.lottery_name || 'Lotería Chontico').trim();
   const newPrice = parseInt(price, 10) || current.price;
   const newNequi = (nequi || current.nequi).replace(/\D/g, '');
   const newPin = (admin_pin || current.admin_pin).trim();
@@ -366,13 +512,14 @@ app.put('/api/admin/config', requireAdmin, (req, res) => {
 
   db.prepare(`
     UPDATE config 
-    SET name = ?, prize = ?, price = ?, nequi = ?, admin_pin = ?, reserve_minutes = ?, updated_at = ?
+    SET name = ?, prize = ?, lottery_name = ?, price = ?, nequi = ?, admin_pin = ?, reserve_minutes = ?, updated_at = ?
     WHERE id = 1
-  `).run(newName, newPrize, newPrice, newNequi, newPin, newReserveMinutes, Date.now());
+  `).run(newName, newPrize, newLottery, newPrice, newNequi, newPin, newReserveMinutes, Date.now());
 
   broadcastEvent('config_updated', {
     name: newName,
     prize: newPrize,
+    lottery_name: newLottery,
     price: newPrice,
     nequi: newNequi
   });

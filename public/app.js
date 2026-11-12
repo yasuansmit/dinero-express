@@ -62,6 +62,18 @@
   const progressPctText = document.getElementById('progressPctText');
   const progressFillBar = document.getElementById('progressFillBar');
 
+  const preLaunchBanner = document.getElementById('preLaunchBanner');
+  const officialWinnerBanner = document.getElementById('officialWinnerBanner');
+  const bannerWinnerNum = document.getElementById('bannerWinnerNum');
+  const bannerWinnerName = document.getElementById('bannerWinnerName');
+  const boardCard = document.getElementById('boardCard');
+  const liveStatusLabel = document.getElementById('liveStatusLabel');
+
+  const btnOpenFlyerModal = document.getElementById('btnOpenFlyerModal');
+  const flyerModal = document.getElementById('flyerModal');
+  const btnCloseFlyerModal = document.getElementById('btnCloseFlyerModal');
+  const btnCloseFlyerBtn = document.getElementById('btnCloseFlyerBtn');
+
   const countFree = document.getElementById('countFree');
   const countReserved = document.getElementById('countReserved');
   const countPaid = document.getElementById('countPaid');
@@ -156,8 +168,27 @@
 
   function renderHeader() {
     raffleName.textContent = config.name;
-    rafflePrize.textContent = config.prize;
     rafflePrice.textContent = formatCOP(config.price) + ' COP';
+
+    const status = config.raffleStatus || 'active';
+
+    if (status === 'pre_launch') {
+      preLaunchBanner.style.display = 'block';
+      boardCard.classList.add('grid-locked-overlay');
+      if (liveStatusLabel) liveStatusLabel.textContent = 'En Espera · Próximamente';
+    } else {
+      preLaunchBanner.style.display = 'none';
+      boardCard.classList.remove('grid-locked-overlay');
+      if (liveStatusLabel) liveStatusLabel.textContent = 'En Vivo';
+    }
+
+    if (config.winningNumber && config.winnerName) {
+      officialWinnerBanner.style.display = 'block';
+      bannerWinnerNum.textContent = config.winningNumber;
+      bannerWinnerName.textContent = config.winnerName;
+    } else {
+      officialWinnerBanner.style.display = 'none';
+    }
   }
 
   function updateStats() {
@@ -493,6 +524,11 @@
     if (countdownInterval) clearInterval(countdownInterval);
   });
 
+  // Modal de Afiche Oficial
+  if (btnOpenFlyerModal) btnOpenFlyerModal.onclick = () => flyerModal.style.display = 'flex';
+  if (btnCloseFlyerModal) btnCloseFlyerModal.onclick = () => flyerModal.style.display = 'none';
+  if (btnCloseFlyerBtn) btnCloseFlyerBtn.onclick = () => flyerModal.style.display = 'none';
+
   // Cerrar al hacer clic en fondo
   window.addEventListener('click', (e) => {
     if (e.target === reserveModal) reserveModal.style.display = 'none';
@@ -510,6 +546,28 @@
     es.addEventListener('numbers_released', (e) => {
       loadData();
       showToast('Se han liberado algunas boletas vencidas.', 'info');
+    });
+
+    es.addEventListener('raffle_status_changed', (e) => {
+      loadData();
+      try {
+        const d = JSON.parse(e.data);
+        if (d.status === 'active') {
+          showToast('🔥 ¡SE HA ABIERTO LA VENTA DE NÚMEROS! Ya puedes escoger el tuyo.', 'success');
+          playSuccessSound();
+        } else if (d.status === 'pre_launch') {
+          showToast('La rifa ha pasado a modo de espera antes de iniciar.', 'info');
+        }
+      } catch {}
+    });
+
+    es.addEventListener('winner_announced', (e) => {
+      loadData();
+      try {
+        const d = JSON.parse(e.data);
+        showToast(`🏆 ¡LOTERÍA CHONTICO: NÚMERO GANADOR ${d.winningNumber}! Ganador: ${d.winnerName}`, 'success');
+        playSuccessSound();
+      } catch {}
     });
 
     es.addEventListener('config_updated', () => {
