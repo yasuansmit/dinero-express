@@ -94,6 +94,7 @@
 
   // Tarjeta Fija de Compra
   const inlinePurchaseCard = document.getElementById('inlinePurchaseCard');
+  const inlineHelpText = document.getElementById('inlineHelpText');
   const inlineNumsText = document.getElementById('inlineNumsText');
   const inlineTotalText = document.getElementById('inlineTotalText');
   const btnInlineProceed = document.getElementById('btnInlineProceed');
@@ -289,22 +290,43 @@
 
     if (count > 0) {
       if (btnTopPay) {
-        btnTopPay.style.display = 'inline-flex';
-        topPayCount.textContent = count;
+        btnTopPay.disabled = false;
+        btnTopPay.style.opacity = '1';
+        btnTopPay.style.cursor = 'pointer';
+        btnTopPay.textContent = `💳 PAGAR (${count})`;
       }
       bottomBar.classList.remove('closed');
       barTotal.textContent = formatCOP(total);
       barNumbers.textContent = numsFormatted;
 
-      if (inlinePurchaseCard) {
-        inlinePurchaseCard.style.display = 'block';
-        inlineNumsText.textContent = numsFormatted;
-        inlineTotalText.textContent = `Total: ${formatCOP(total)} COP`;
+      if (btnInlineProceed) {
+        btnInlineProceed.disabled = false;
+        btnInlineProceed.style.opacity = '1';
+        btnInlineProceed.style.cursor = 'pointer';
+        btnInlineProceed.textContent = `💳 PAGAR ${formatCOP(total)} COP AHORA`;
       }
+      if (inlineHelpText) inlineHelpText.textContent = '🎉 ¡Boletas listas! Toca aquí para transferir por Nequi:';
+      if (inlineNumsText) inlineNumsText.textContent = 'Boletas: ' + numsFormatted;
+      if (inlineTotalText) inlineTotalText.textContent = `Total: ${formatCOP(total)} COP`;
+
     } else {
-      if (btnTopPay) btnTopPay.style.display = 'none';
+      if (btnTopPay) {
+        btnTopPay.disabled = true;
+        btnTopPay.style.opacity = '0.55';
+        btnTopPay.style.cursor = 'not-allowed';
+        btnTopPay.textContent = '💳 PAGAR (0)';
+      }
       bottomBar.classList.add('closed');
-      if (inlinePurchaseCard) inlinePurchaseCard.style.display = 'none';
+
+      if (btnInlineProceed) {
+        btnInlineProceed.disabled = true;
+        btnInlineProceed.style.opacity = '0.6';
+        btnInlineProceed.style.cursor = 'not-allowed';
+        btnInlineProceed.textContent = '💳 PAGAR POR NEQUI AHORA';
+      }
+      if (inlineHelpText) inlineHelpText.textContent = '👆 Toca tus números favoritos arriba para pagar';
+      if (inlineNumsText) inlineNumsText.textContent = 'Boletas: Ninguna seleccionada';
+      if (inlineTotalText) inlineTotalText.textContent = 'Total: $0 COP';
     }
   }
 
