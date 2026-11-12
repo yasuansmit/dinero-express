@@ -173,8 +173,8 @@
       });
 
       renderHeader();
-      renderGrid();
       updateStats();
+      renderGrid();
     } catch (err) {
       console.error(err);
     }
@@ -225,14 +225,14 @@
       else if (item.status === 'paid') paid++;
     }
 
-    countFree.textContent = free;
-    countReserved.textContent = res;
-    countPaid.textContent = paid;
+    if (countFree) countFree.textContent = free;
+    if (countReserved) countReserved.textContent = res;
+    if (countPaid) countPaid.textContent = paid;
 
     const taken = res + paid;
     const pct = Math.round((taken / total) * 100);
-    progressPctText.textContent = `${pct}% (${taken}/${total})`;
-    progressFillBar.style.width = `${pct}%`;
+    if (progressPctText) progressPctText.textContent = `${pct}% (${taken}/${total})`;
+    if (progressFillBar) progressFillBar.style.width = `${pct}%`;
   }
 
   function renderGrid() {
@@ -280,53 +280,61 @@
   }
 
   function updateSelectionUI() {
-    const list = Array.from(selectedNumbers).sort((a, b) => a - b);
-    const count = list.length;
-    const total = count * config.price;
-    const numsFormatted = list.map(n => String(n).padStart(2, '0')).join(', ');
+    try {
+      const list = Array.from(selectedNumbers).sort((a, b) => a - b);
+      const count = list.length;
+      const total = count * (config.price || 12000);
+      const numsFormatted = list.map(n => String(n).padStart(2, '0')).join(', ');
 
-    selectionSummary.textContent = count === 0 ? '0 seleccionados' : count === 1 ? '1 número elegido' : `${count} números elegidos`;
-    btnClearSelection.style.display = count > 0 ? 'inline-flex' : 'none';
-
-    if (count > 0) {
-      if (btnTopPay) {
-        btnTopPay.disabled = false;
-        btnTopPay.style.opacity = '1';
-        btnTopPay.style.cursor = 'pointer';
-        btnTopPay.textContent = `💳 PAGAR (${count})`;
+      if (selectionSummary) {
+        selectionSummary.textContent = count === 0 ? '0 seleccionados' : count === 1 ? '1 número elegido' : `${count} números elegidos`;
       }
-      bottomBar.classList.remove('closed');
-      barTotal.textContent = formatCOP(total);
-      barNumbers.textContent = numsFormatted;
-
-      if (btnInlineProceed) {
-        btnInlineProceed.disabled = false;
-        btnInlineProceed.style.opacity = '1';
-        btnInlineProceed.style.cursor = 'pointer';
-        btnInlineProceed.textContent = `💳 PAGAR ${formatCOP(total)} COP AHORA`;
+      if (btnClearSelection) {
+        btnClearSelection.style.display = count > 0 ? 'inline-flex' : 'none';
       }
-      if (inlineHelpText) inlineHelpText.textContent = '🎉 ¡Boletas listas! Toca aquí para transferir por Nequi:';
-      if (inlineNumsText) inlineNumsText.textContent = 'Boletas: ' + numsFormatted;
-      if (inlineTotalText) inlineTotalText.textContent = `Total: ${formatCOP(total)} COP`;
 
-    } else {
-      if (btnTopPay) {
-        btnTopPay.disabled = true;
-        btnTopPay.style.opacity = '0.55';
-        btnTopPay.style.cursor = 'not-allowed';
-        btnTopPay.textContent = '💳 PAGAR (0)';
-      }
-      bottomBar.classList.add('closed');
+      if (count > 0) {
+        if (btnTopPay) {
+          btnTopPay.disabled = false;
+          btnTopPay.style.opacity = '1';
+          btnTopPay.style.cursor = 'pointer';
+          btnTopPay.textContent = `💳 PAGAR (${count})`;
+        }
+        if (bottomBar) bottomBar.classList.remove('closed');
+        if (barTotal) barTotal.textContent = formatCOP(total);
+        if (barNumbers) barNumbers.textContent = numsFormatted;
 
-      if (btnInlineProceed) {
-        btnInlineProceed.disabled = true;
-        btnInlineProceed.style.opacity = '0.6';
-        btnInlineProceed.style.cursor = 'not-allowed';
-        btnInlineProceed.textContent = '💳 PAGAR POR NEQUI AHORA';
+        if (btnInlineProceed) {
+          btnInlineProceed.disabled = false;
+          btnInlineProceed.style.opacity = '1';
+          btnInlineProceed.style.cursor = 'pointer';
+          btnInlineProceed.textContent = `💳 PAGAR ${formatCOP(total)} COP AHORA`;
+        }
+        if (inlineHelpText) inlineHelpText.textContent = '🎉 ¡Boletas listas! Toca el botón verde para pagar:';
+        if (inlineNumsText) inlineNumsText.textContent = 'Boletas: ' + numsFormatted;
+        if (inlineTotalText) inlineTotalText.textContent = `Total a transferir: ${formatCOP(total)} COP`;
+
+      } else {
+        if (btnTopPay) {
+          btnTopPay.disabled = true;
+          btnTopPay.style.opacity = '0.55';
+          btnTopPay.style.cursor = 'not-allowed';
+          btnTopPay.textContent = '💳 PAGAR (0)';
+        }
+        if (bottomBar) bottomBar.classList.add('closed');
+
+        if (btnInlineProceed) {
+          btnInlineProceed.disabled = true;
+          btnInlineProceed.style.opacity = '0.6';
+          btnInlineProceed.style.cursor = 'not-allowed';
+          btnInlineProceed.textContent = '💳 PAGAR POR NEQUI AHORA';
+        }
+        if (inlineHelpText) inlineHelpText.textContent = '👆 Toca tus números favoritos arriba para pagar';
+        if (inlineNumsText) inlineNumsText.textContent = 'Boletas: Ninguna seleccionada';
+        if (inlineTotalText) inlineTotalText.textContent = 'Total: $0 COP';
       }
-      if (inlineHelpText) inlineHelpText.textContent = '👆 Toca tus números favoritos arriba para pagar';
-      if (inlineNumsText) inlineNumsText.textContent = 'Boletas: Ninguna seleccionada';
-      if (inlineTotalText) inlineTotalText.textContent = 'Total: $0 COP';
+    } catch (err) {
+      console.error('Error en updateSelectionUI:', err);
     }
   }
 
