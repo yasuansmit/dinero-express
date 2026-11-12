@@ -4,6 +4,7 @@
   let currentData = null;
   let activeFilter = 'all';
   let cachedTemplates = {};
+  const selectedBatchNumbers = new Set();
 
   // DOM
   const loginModal = document.getElementById('loginModal');
@@ -37,6 +38,13 @@
   const filterAllCount = document.getElementById('filterAllCount');
   const filterResCount = document.getElementById('filterResCount');
   const filterPaidCount = document.getElementById('filterPaidCount');
+
+  // Lote masivo
+  const batchActionBar = document.getElementById('batchActionBar');
+  const batchSelectedCount = document.getElementById('batchSelectedCount');
+  const btnBatchMarkPaid = document.getElementById('btnBatchMarkPaid');
+  const btnBatchFree = document.getElementById('btnBatchFree');
+  const selectAllCheckbox = document.getElementById('selectAllCheckbox');
 
   const configForm = document.getElementById('configForm');
   const cfgName = document.getElementById('cfgName');
@@ -308,11 +316,12 @@
     if (filtered.length === 0) {
       buyersTableBody.innerHTML = `
         <tr>
-          <td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">
+          <td colspan="6" style="text-align:center; padding: 24px; color: var(--text-muted);">
             No hay participantes en este filtro.
           </td>
         </tr>
       `;
+      updateBatchUI();
       return;
     }
 
@@ -320,6 +329,7 @@
       const numFormatted = String(b.num).padStart(2, '0');
       const isReserved = b.status === 'reserved';
       const cleanPhone = (b.phone || '').replace(/\D/g, '');
+      const isChecked = selectedBatchNumbers.has(b.num);
       
       let timeNotice = '';
       if (isReserved && b.timeLeftSec !== undefined) {
@@ -333,6 +343,9 @@
 
       return `
         <tr>
+          <td style="text-align: center;">
+            <input type="checkbox" class="buyer-checkbox" data-num="${b.num}" ${isChecked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color: var(--nequi-pink);">
+          </td>
           <td><strong style="font-size:1.15rem; color:var(--nequi-pink); font-family:monospace;">${numFormatted}</strong></td>
           <td><strong>${escapeHtml(b.name || 'Sin nombre')}</strong></td>
           <td><span style="font-family:monospace;">${escapeHtml(b.phone || 'Sin celular')}</span></td>
@@ -353,6 +366,121 @@
         </tr>
       `;
     }).join('');
+
+    // Conectar eventos a los checkboxes individuales
+    const checkboxes = buyersTableBody.querySelectorAll('.buyer-checkbox');
+    checkboxes.forEach(cb => {
+      cb.addEventListener('change', () => {
+        const n = parseInt(cb.dataset.num, 10);
+        if (cb.checked) {
+          selectedBatchNumbers.add(n);
+        } else {
+          selectedBatchNumbers.delete(n);
+        }
+        updateBatchUI();
+      });
+    });
+
+    updateBatchUI();
+  }
+
+  // Manejo de Lotes Masivos
+  function updateBatchUI() {
+    const count = selectedBatchNumbers.size;
+    if (batchSelectedCount) batchSelectedCount.textContent = count;
+    if (batchActionBar) {
+      batchActionBar.style.display = count > 0 ? 'flex' : 'none';
+    }
+    if (selectAllCheckbox) {
+      const allCbs = buyersTableBody.querySelectorAll('.buyer-checkbox');
+      selectAllCheckbox.checked = allCbs.length > 0 && Array.from(allCbs).every(cb => cb.checked);
+    }
+  }
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', () => {
+      const allCbs = buyersTableBody.querySelectorAll('.buyer-checkbox');
+      allCbs.forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+        const n = parseInt(cb.dataset.num, 10);
+        if (selectAllCheckbox.checked) {
+          selectedBatchNumbers.add(n);
+        } else {
+          selectedBatchNumbers.delete(n);
+        }
+      });
+      updateBatchUI();
+    });
+  }
+
+  if (btnBatchMarkPaid) {
+    btnBatchMarkPaid.addEventListener('click', async () => {
+      const nums = Array.from(selectedBatchNumbers);
+      if (!nums.length) return;
+      if (!confirm(`¿Confirmas marcar como PAGADAS las ${nums.length} boletas seleccionadas?`)) return;
+
+      btnBatchMarkPaid.disabled = true;
+      btnBatchMarkPaid.textContent = 'Actualizando...';
+
+      try {
+        const res = await fetch('/api/admin/set-batch-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-pin': adminPin
+          },
+          body: JSON.stringify({ numbers: nums, status: 'paid' })
+        });
+
+        if (res.ok) {
+          showToast(`¡${nums.length} boletas marcadas como PAGADAS exitosamente! ✓`, 'success');
+          selectedBatchNumbers.clear();
+          loadAdminData();
+        } else {
+          showToast('Error al actualizar lote.', 'error');
+        }
+      } catch {
+        showToast('Error de conexión.', 'error');
+      } finally {
+        btnBatchMarkPaid.disabled = false;
+        btnBatchMarkPaid.textContent = '✓ Marcar Selección como PAGADAS';
+      }
+    });
+  }
+
+  if (btnBatchFree) {
+    btnBatchFree.addEventListener('click', async () => {
+      const nums = Array.from(selectedBatchNumbers);
+      if (!nums.length) return;
+      if (!confirm(`⚠️ ¿Seguro que deseas LIBERAR las ${nums.length} boletas seleccionadas?`)) return;
+
+      btnBatchFree.disabled = true;
+      btnBatchFree.textContent = 'Liberando...';
+
+      try {
+        const res = await fetch('/api/admin/set-batch-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-pin': adminPin
+          },
+          body: JSON.stringify({ numbers: nums, status: 'free' })
+        });
+
+        if (res.ok) {
+          showToast(`¡${nums.length} boletas liberadas exitosamente!`, 'success');
+          selectedBatchNumbers.clear();
+          loadAdminData();
+        } else {
+          showToast('Error al liberar lote.', 'error');
+        }
+      } catch {
+        showToast('Error de conexión.', 'error');
+      } finally {
+        btnBatchFree.disabled = false;
+        btnBatchFree.textContent = '✕ Liberar Selección';
+      }
+    });
   }
 
   function escapeHtml(str) {

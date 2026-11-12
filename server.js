@@ -490,7 +490,7 @@ app.get('/api/admin/whatsapp-templates', requireAdmin, (req, res) => {
   const fullUrl = origin.startsWith('http') ? origin : `${protocol}://${origin}`;
 
   // Obtener números libres
-  const freeRows = db.prepare('SELECT num FROM numbers WHERE status = "free" ORDER BY num ASC').all();
+  const freeRows = db.prepare("SELECT num FROM numbers WHERE status = 'free' ORDER BY num ASC").all();
   const freeCount = freeRows.length;
   const sampleFree = freeRows.slice(0, 15).map(r => String(r.num).padStart(2, '0')).join(', ');
   const moreText = freeCount > 15 ? ` y ${freeCount - 15} más...` : '';
@@ -565,6 +565,35 @@ app.put('/api/admin/config', requireAdmin, (req, res) => {
   });
 
   res.json({ success: true, message: 'Configuración guardada correctamente.' });
+});
+
+// Cambiar estado de múltiples números en lote (selección masiva)
+app.post('/api/admin/set-batch-status', requireAdmin, (req, res) => {
+  const { numbers, status } = req.body; // status: 'paid' | 'free'
+
+  if (!Array.isArray(numbers) || !numbers.length || !['paid', 'free'].includes(status)) {
+    return res.status(400).json({ error: 'Parámetros no válidos.' });
+  }
+
+  const now = Date.now();
+  if (status === 'paid') {
+    const stmt = db.prepare('UPDATE numbers SET status = "paid", paid_at = ? WHERE num = ?');
+    for (const num of numbers) {
+      stmt.run(now, num);
+    }
+  } else if (status === 'free') {
+    const stmt = db.prepare('UPDATE numbers SET status = "free", buyer_name = NULL, buyer_phone = NULL, reserved_at = NULL, paid_at = NULL, proof_image = NULL WHERE num = ?');
+    for (const num of numbers) {
+      stmt.run(num);
+    }
+  }
+
+  broadcastEvent('numbers_updated', {
+    action: status,
+    numbers: numbers
+  });
+
+  res.json({ success: true, count: numbers.length });
 });
 
 // Cambiar estado de un número (pagado o liberar)
