@@ -87,6 +87,11 @@
   const barNumbers = document.getElementById('barNumbers');
   const btnOpenReserveModal = document.getElementById('btnOpenReserveModal');
 
+  const mainHeroNequi = document.getElementById('mainHeroNequi');
+  const btnCopyNequiHeader = document.getElementById('btnCopyNequiHeader');
+  const btnTopPay = document.getElementById('btnTopPay');
+  const topPayCount = document.getElementById('topPayCount');
+
   // Tarjeta Fija de Compra
   const inlinePurchaseCard = document.getElementById('inlinePurchaseCard');
   const inlineNumsText = document.getElementById('inlineNumsText');
@@ -177,6 +182,10 @@
   function renderHeader() {
     raffleName.textContent = config.name;
     rafflePrice.textContent = formatCOP(config.price) + ' COP';
+
+    if (mainHeroNequi && config.nequi) {
+      mainHeroNequi.textContent = config.nequi.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+    }
 
     if (config.flyerUrl) {
       if (headerFlyerImg) headerFlyerImg.src = config.flyerUrl;
@@ -279,6 +288,10 @@
     btnClearSelection.style.display = count > 0 ? 'inline-flex' : 'none';
 
     if (count > 0) {
+      if (btnTopPay) {
+        btnTopPay.style.display = 'inline-flex';
+        topPayCount.textContent = count;
+      }
       bottomBar.classList.remove('closed');
       barTotal.textContent = formatCOP(total);
       barNumbers.textContent = numsFormatted;
@@ -289,6 +302,7 @@
         inlineTotalText.textContent = `Total: ${formatCOP(total)} COP`;
       }
     } else {
+      if (btnTopPay) btnTopPay.style.display = 'none';
       bottomBar.classList.add('closed');
       if (inlinePurchaseCard) inlinePurchaseCard.style.display = 'none';
     }
@@ -334,6 +348,22 @@
 
   btnOpenReserveModal.addEventListener('click', openReserveFlow);
   if (btnInlineProceed) btnInlineProceed.addEventListener('click', openReserveFlow);
+  if (btnTopPay) btnTopPay.addEventListener('click', openReserveFlow);
+
+  if (btnCopyNequiHeader) {
+    btnCopyNequiHeader.addEventListener('click', async () => {
+      try {
+        const raw = config.nequi.replace(/\D/g, '');
+        await navigator.clipboard.writeText(raw);
+        showToast('¡Número Nequi copiado! (' + raw + ')', 'success');
+        const prev = btnCopyNequiHeader.textContent;
+        btnCopyNequiHeader.textContent = '¡Copiado! ✓';
+        setTimeout(() => { btnCopyNequiHeader.textContent = prev; }, 2000);
+      } catch {
+        showToast('Nequi: ' + config.nequi);
+      }
+    });
+  }
 
   btnCloseReserveModal.addEventListener('click', () => {
     reserveModal.style.display = 'none';

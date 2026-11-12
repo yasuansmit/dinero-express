@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2.2">
   <style>
     /* Estilos especiales para el Sorteo Progresivo Dinero Express */
     .flyer-thumbnail-card {
@@ -185,6 +185,15 @@
           <div style="font-size: 1rem; font-weight: 800; color: #ffffff;">Nequi 📲</div>
         </div>
       </div>
+
+      <!-- Caja Destacada con el Número Nequi para Pagar -->
+      <div style="background: rgba(20, 0, 30, 0.75); border: 1.5px solid var(--nequi-pink); border-radius: 12px; padding: 10px 14px; margin-top: 12px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:0.72rem; color:#fde047; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">📲 Número Nequi para Pagar:</div>
+          <div style="font-size:1.3rem; font-weight:900; letter-spacing:0.06em; font-family:monospace;" id="mainHeroNequi">321 613 9972</div>
+        </div>
+        <button type="button" class="btn-copy-chip" id="btnCopyNequiHeader">Copiar Nequi</button>
+      </div>
     </header>
 
     <!-- Leyenda de Estados -->
@@ -209,18 +218,22 @@
 
     <!-- Herramientas Rápidas -->
     <div class="tools-strip" style="flex-wrap: wrap;">
-      <div style="display:flex; gap:6px; flex: 1; min-width: 180px;">
-        <input class="field-input" type="number" id="searchQuickNum" min="1" max="100" placeholder="🔍 Buscar N° (ej. 42)" style="padding: 8px 12px; font-size: 0.85rem; font-weight:700;">
+      <div style="display:flex; gap:6px; flex: 1; min-width: 170px;">
+        <input class="field-input" type="number" id="searchQuickNum" min="1" max="100" placeholder="🔍 N° (ej. 42)" style="padding: 8px 12px; font-size: 0.85rem; font-weight:700;">
         <button class="btn-tool" id="btnQuickSelect">Ir</button>
       </div>
 
       <div style="display:flex; gap:6px; align-items:center;">
         <button class="btn-tool" id="btnLuckyNumber">
           <span>🎲</span>
-          <span>De la Suerte</span>
+          <span>Suerte</span>
         </button>
         <button class="btn-tool" id="btnClearSelection" style="display:none; color: #ef4444;">
           <span>✕</span>
+        </button>
+        <!-- Botón Superior de Pago Inmediato -->
+        <button class="btn-proceed" id="btnTopPay" style="display:none; padding: 8px 14px; font-size: 0.85rem; animation: pulseLive 1.5s infinite;">
+          💳 Pagar (<span id="topPayCount">0</span>)
         </button>
       </div>
     </div>
@@ -388,6 +401,6 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=2.2"></script>
 </body>
 </html>

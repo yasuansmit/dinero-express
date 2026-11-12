@@ -14,7 +14,11 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  next();
+});
+app.use(express.static(path.join(__dirname, 'public'), { etag: false, maxAge: 0 }));
 
 // Lista de conexiones activas Server-Sent Events (SSE)
 const sseClients = new Set();
