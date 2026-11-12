@@ -140,7 +140,7 @@
 
       <!-- Flyer Thumbnail Oficial -->
       <div class="flyer-thumbnail-card" id="btnOpenFlyerModal" title="Toca para ver el afiche oficial completo">
-        <img src="/img/dinero-express-flyer.jpg" alt="Afiche Oficial Dinero Express">
+        <img id="headerFlyerImg" src="/img/dinero-express-flyer.jpg" alt="Afiche Oficial Dinero Express">
         <div class="flyer-badge-overlay">🔍 Toca para ampliar afiche</div>
       </div>
 
@@ -229,6 +229,16 @@
     <main class="board-card" id="boardCard">
       <div class="grid-numbers" id="numbersGrid">
         <!-- Renderizado dinámico -->
+      </div>
+
+      <!-- Tarjeta Fija de Compra (Directa al final de la cuadrícula) -->
+      <div id="inlinePurchaseCard" style="display:none; margin-top: 18px; padding: 16px; background: linear-gradient(135deg, var(--nequi-dark), #3b0754); border: 2px solid var(--nequi-pink); border-radius: 16px; color: white; text-align: center; box-shadow: 0 8px 25px rgba(218, 0, 129, 0.35); animation: selectPop 0.3s ease;">
+        <div style="font-size: 0.85rem; opacity: 0.85; margin-bottom: 2px;">Boletas elegidas:</div>
+        <div style="font-size: 1.25rem; font-weight: 900; color: #fde047; margin-bottom: 6px;" id="inlineNumsText">Ninguna</div>
+        <div style="font-size: 1.4rem; font-weight: 900; margin-bottom: 12px;" id="inlineTotalText">$0 COP</div>
+        <button type="button" class="btn-proceed" id="btnInlineProceed" style="width: 100%; justify-content: center; padding: 15px; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(218,0,129,0.5);">
+          🎟️ RESERVAR Y PAGAR POR NEQUI
+        </button>
       </div>
     </main>
 
@@ -370,7 +380,7 @@
         <button class="btn-dismiss" id="btnCloseFlyerModal">&times;</button>
       </div>
       <div style="border-radius: 14px; overflow: hidden; margin-bottom: 10px; max-height: 75vh; overflow-y: auto;">
-        <img src="/img/dinero-express-flyer.jpg" alt="Afiche Oficial Dinero Express" style="width: 100%; height: auto; display: block;">
+        <img id="modalFlyerImg" src="/img/dinero-express-flyer.jpg" alt="Afiche Oficial Dinero Express" style="width: 100%; height: auto; display: block;">
       </div>
       <button class="btn-proceed" id="btnCloseFlyerBtn" style="width: 100%; justify-content: center; padding: 10px;">
         Volver a la Rifa

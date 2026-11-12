@@ -199,9 +199,79 @@
     statProgress.style.width = `${stats.percentPaid}%`;
   }
 
+  // Gestor de Afiche
+  const adminFlyerPreview = document.getElementById('adminFlyerPreview');
+  const flyerFileInput = document.getElementById('flyerFileInput');
+  const btnSelectFlyerFile = document.getElementById('btnSelectFlyerFile');
+  const flyerSelectedName = document.getElementById('flyerSelectedName');
+  const btnSaveFlyer = document.getElementById('btnSaveFlyer');
+  let selectedFlyerBase64 = null;
+
+  if (btnSelectFlyerFile) {
+    btnSelectFlyerFile.addEventListener('click', () => flyerFileInput.click());
+  }
+
+  if (flyerFileInput) {
+    flyerFileInput.addEventListener('change', () => {
+      const file = flyerFileInput.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        showToast('Por favor selecciona una imagen válida.', 'error');
+        return;
+      }
+
+      flyerSelectedName.textContent = `Archivo: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+      btnSaveFlyer.style.display = 'inline-flex';
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        selectedFlyerBase64 = reader.result;
+        adminFlyerPreview.src = selectedFlyerBase64;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (btnSaveFlyer) {
+    btnSaveFlyer.addEventListener('click', async () => {
+      if (!selectedFlyerBase64) return;
+      btnSaveFlyer.disabled = true;
+      btnSaveFlyer.textContent = 'Subiendo afiche...';
+
+      try {
+        const res = await fetch('/api/admin/upload-flyer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-pin': adminPin
+          },
+          body: JSON.stringify({ imageBase64: selectedFlyerBase64 })
+        });
+
+        if (res.ok) {
+          showToast('¡Afiche oficial actualizado y publicado con éxito! 🖼️', 'success');
+          btnSaveFlyer.style.display = 'none';
+          btnSelectFlyerFile.textContent = '✓ Afiche Guardado';
+          loadAdminData();
+        } else {
+          showToast('No se pudo subir la imagen.', 'error');
+        }
+      } catch {
+        showToast('Error de conexión al subir afiche.', 'error');
+      } finally {
+        btnSaveFlyer.disabled = false;
+        btnSaveFlyer.textContent = '💾 Guardar y Publicar Nuevo Afiche';
+      }
+    });
+  }
+
   function fillConfigForm() {
     if (!currentData) return;
     const { config } = currentData;
+    if (adminFlyerPreview && config.flyerUrl) {
+      adminFlyerPreview.src = config.flyerUrl;
+    }
     cfgName.value = config.name;
     cfgPrize.value = config.prize;
     cfgLottery.value = config.lotteryName || 'Lotería Chontico Día y Noche';

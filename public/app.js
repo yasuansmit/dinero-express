@@ -87,6 +87,14 @@
   const barNumbers = document.getElementById('barNumbers');
   const btnOpenReserveModal = document.getElementById('btnOpenReserveModal');
 
+  // Tarjeta Fija de Compra
+  const inlinePurchaseCard = document.getElementById('inlinePurchaseCard');
+  const inlineNumsText = document.getElementById('inlineNumsText');
+  const inlineTotalText = document.getElementById('inlineTotalText');
+  const btnInlineProceed = document.getElementById('btnInlineProceed');
+  const headerFlyerImg = document.getElementById('headerFlyerImg');
+  const modalFlyerImg = document.getElementById('modalFlyerImg');
+
   // Modales
   const reserveModal = document.getElementById('reserveModal');
   const btnCloseReserveModal = document.getElementById('btnCloseReserveModal');
@@ -169,6 +177,11 @@
   function renderHeader() {
     raffleName.textContent = config.name;
     rafflePrice.textContent = formatCOP(config.price) + ' COP';
+
+    if (config.flyerUrl) {
+      if (headerFlyerImg) headerFlyerImg.src = config.flyerUrl;
+      if (modalFlyerImg) modalFlyerImg.src = config.flyerUrl;
+    }
 
     const status = config.raffleStatus || 'active';
 
@@ -260,6 +273,7 @@
     const list = Array.from(selectedNumbers).sort((a, b) => a - b);
     const count = list.length;
     const total = count * config.price;
+    const numsFormatted = list.map(n => String(n).padStart(2, '0')).join(', ');
 
     selectionSummary.textContent = count === 0 ? '0 seleccionados' : count === 1 ? '1 número elegido' : `${count} números elegidos`;
     btnClearSelection.style.display = count > 0 ? 'inline-flex' : 'none';
@@ -267,9 +281,16 @@
     if (count > 0) {
       bottomBar.classList.remove('closed');
       barTotal.textContent = formatCOP(total);
-      barNumbers.textContent = list.map(n => String(n).padStart(2, '0')).join(', ');
+      barNumbers.textContent = numsFormatted;
+
+      if (inlinePurchaseCard) {
+        inlinePurchaseCard.style.display = 'block';
+        inlineNumsText.textContent = numsFormatted;
+        inlineTotalText.textContent = `Total: ${formatCOP(total)} COP`;
+      }
     } else {
       bottomBar.classList.add('closed');
+      if (inlinePurchaseCard) inlinePurchaseCard.style.display = 'none';
     }
   }
 
@@ -302,14 +323,17 @@
   });
 
   // Abrir Modal Formulario
-  btnOpenReserveModal.addEventListener('click', () => {
+  function openReserveFlow() {
     const list = Array.from(selectedNumbers).sort((a, b) => a - b);
     if (!list.length) return;
 
     modalNumbersText.textContent = list.map(n => String(n).padStart(2, '0')).join(', ');
     modalTotalText.textContent = formatCOP(list.length * config.price) + ' COP';
     reserveModal.style.display = 'flex';
-  });
+  }
+
+  btnOpenReserveModal.addEventListener('click', openReserveFlow);
+  if (btnInlineProceed) btnInlineProceed.addEventListener('click', openReserveFlow);
 
   btnCloseReserveModal.addEventListener('click', () => {
     reserveModal.style.display = 'none';

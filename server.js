@@ -133,7 +133,7 @@ app.get('/api/raffle', (req, res) => {
       raffleStatus: cfg.raffle_status || 'active',
       winningNumber: cfg.winning_number,
       winnerName: cfg.winner_name,
-      flyerUrl: '/img/dinero-express-flyer.jpg'
+      flyerUrl: cfg.flyer_url || '/img/dinero-express-flyer.jpg'
     },
     numbers
   });
@@ -360,7 +360,7 @@ app.get('/api/admin/data', requireAdmin, (req, res) => {
       winningNumber: cfg.winning_number,
       winnerName: cfg.winner_name,
       winnerPhone: cfg.winner_phone,
-      flyerUrl: '/img/dinero-express-flyer.jpg'
+      flyerUrl: cfg.flyer_url || '/img/dinero-express-flyer.jpg'
     },
     stats: {
       free: freeCount,
@@ -373,6 +373,42 @@ app.get('/api/admin/data', requireAdmin, (req, res) => {
     },
     buyers
   });
+});
+
+// Cambiar afiche oficial de la rifa
+app.post('/api/admin/upload-flyer', requireAdmin, (req, res) => {
+  const { imageBase64 } = req.body;
+  if (!imageBase64) {
+    return res.status(400).json({ error: 'No se envió ninguna imagen.' });
+  }
+
+  try {
+    const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    let buffer;
+    let ext = 'jpg';
+
+    if (matches && matches.length === 3) {
+      const mime = matches[1];
+      if (mime.includes('png')) ext = 'png';
+      else if (mime.includes('webp')) ext = 'webp';
+      buffer = Buffer.from(matches[2], 'base64');
+    } else {
+      buffer = Buffer.from(imageBase64, 'base64');
+    }
+
+    const filename = `flyer_${Date.now()}.${ext}`;
+    const filePath = path.join(uploadsDir, filename);
+    fs.writeFileSync(filePath, buffer);
+
+    const flyerUrl = `/uploads/${filename}`;
+    db.prepare('UPDATE config SET flyer_url = ?, updated_at = ? WHERE id = 1').run(flyerUrl, Date.now());
+
+    broadcastEvent('config_updated', { flyerUrl });
+    res.json({ success: true, flyerUrl });
+  } catch (err) {
+    console.error('Error subiendo afiche:', err);
+    res.status(500).json({ error: 'No se pudo guardar la imagen del afiche.' });
+  }
 });
 
 // Cambiar estado de la rifa (pre_launch, active, finished)

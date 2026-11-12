@@ -42,6 +42,7 @@ function initDB() {
   try { db.exec('ALTER TABLE config ADD COLUMN winning_number TEXT;'); } catch {}
   try { db.exec('ALTER TABLE config ADD COLUMN winner_name TEXT;'); } catch {}
   try { db.exec('ALTER TABLE config ADD COLUMN winner_phone TEXT;'); } catch {}
+  try { db.exec('ALTER TABLE config ADD COLUMN flyer_url TEXT NOT NULL DEFAULT "/img/dinero-express-flyer.jpg";'); } catch {}
   try { db.exec('ALTER TABLE numbers ADD COLUMN proof_image TEXT;'); } catch {}
 
   // Asegurar fila de configuración por defecto
