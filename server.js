@@ -230,7 +230,7 @@ app.post('/api/reserve', (req, res) => {
       `🎯 *Número(s) elegidos:* ${formattedNumbers}\n` +
       `💵 *Total transferido:* $${totalAmount.toLocaleString('es-CO')} COP\n` +
       `📌 *Rifa:* ${cfg.name}\n\n` +
-      `Adjunto el comprobante de pago de mi app Nequi para confirmación. ¡Muchas gracias!`;
+      `Adjunto la captura del comprobante de transferencia a tu Nequi para confirmación de mis boletas. ¡Muchas gracias!`;
     const waUrl = `https://wa.me/57${cfg.nequi}?text=${encodeURIComponent(waText)}`;
 
     res.json({

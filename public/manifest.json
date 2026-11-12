@@ -1,0 +1,17 @@
+{
+  "name": "DINERO EXPRESS · Rifas WhatsApp",
+  "short_name": "Dinero Express",
+  "description": "Plataforma oficial de gestión de rifas con Lotería Chontico y pagos Nequi",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0a0512",
+  "theme_color": "#20002c",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/img/dinero-express-flyer.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
