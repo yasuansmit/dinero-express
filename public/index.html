@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=5.0">
+  <link rel="stylesheet" href="style.css?v=6.0">
   <style>
     /* Estilos especiales para el Sorteo Progresivo Dinero Express */
     .flyer-thumbnail-card {
@@ -116,12 +116,15 @@
       ⏳ <strong>ATENCIÓN:</strong> La rifa va a iniciar pronto. La organizadora dará la señal en el grupo de WhatsApp para abrir las ventas. ¡Ten listo tu Nequi!
     </div>
 
-    <!-- Banner de Estado: Ganador Oficial de Lotería -->
-    <div class="banner-winner-official" id="officialWinnerBanner">
-      <div style="font-size: 1.6rem;">🏆 🎊 🎉</div>
-      <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800;">Ganador Oficial Chontico</div>
-      <div style="font-size: 2.8rem; font-weight: 900; letter-spacing: 0.05em;" id="bannerWinnerNum">00</div>
-      <div style="font-size: 1.15rem; font-weight: 800;" id="bannerWinnerName">Comprador</div>
+    <!-- Banner de Estado: 3 Ganadores Oficiales de Lotería -->
+    <div class="banner-winner-official" id="officialWinnerBanner" style="display:none; background: linear-gradient(135deg, #065f46, #047857); border: 2.5px solid #34d399; border-radius: 18px; padding: 20px 16px; margin-bottom: 16px; box-shadow: 0 10px 25px rgba(5, 150, 105, 0.4); text-align: center;">
+      <div style="font-size: 2.2rem;">🏆 🎊 🎉</div>
+      <h2 style="font-size: 1.35rem; font-weight: 900; color: #fde047; margin: 4px 0;">¡RESULTADOS Y GANADORES OFICIALES!</h2>
+      <p style="font-size: 0.82rem; color: #a7f3d0; margin-bottom: 14px;" id="bannerLotteryInfo">Lotería Chontico</p>
+      
+      <div id="winnersTiersContainer" style="display: flex; flex-direction: column; gap: 10px; max-width: 480px; margin: 0 auto; text-align: left;">
+        <!-- Se llena dinámicamente con los 3 ganadores -->
+      </div>
     </div>
 
     <!-- Hero Banner Fintech Dinero Express -->
@@ -402,6 +405,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=5.0"></script>
+  <script src="app.js?v=6.0"></script>
 </body>
 </html>

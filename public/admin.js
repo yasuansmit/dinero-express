@@ -178,6 +178,10 @@
       renderBuyers();
       fillConfigForm();
       loadWhatsAppTemplates();
+
+      if (currentData.config && currentData.config.winners && currentData.config.winners.length > 0) {
+        renderLotteryWinners(currentData.config.winners, currentData.config.winningNumber ? 'Último sorteo' : '');
+      }
     } catch (err) {
       console.error(err);
     }
@@ -593,6 +597,70 @@
     }
   };
 
+  // Renderizar Tarjetas de los 3 Ganadores Progresivos
+  function renderLotteryWinners(winners, lotteryDrawn) {
+    if (!lotteryResultCard || !winners || !winners.length) return;
+
+    lotteryResultCard.style.display = 'block';
+
+    const drawnLabel = lotteryDrawn ? ` (Sorteo: ${escapeHtml(lotteryDrawn)})` : '';
+    let html = `
+      <div style="font-size: 1.2rem; font-weight: 800; color: #10b981; margin-bottom: 4px; text-align: center;">
+        🎉 ¡Ganadores Oficiales Lotería Chontico${drawnLabel}!
+      </div>
+      <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 14px;">
+        Presiona el botón verde de cada ganador para abrir WhatsApp con el mensaje listo.
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+    `;
+
+    winners.forEach(w => {
+      const waBtn = w.waUrl
+        ? `<a href="${w.waUrl}" target="_blank" rel="noopener noreferrer" class="action-btn wa" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 11px 16px; margin-top: 10px; font-size: 0.92rem; font-weight: 800; border-radius: 10px; background: #25D366; color: #ffffff; text-decoration: none; box-shadow: 0 4px 12px rgba(37,211,102,0.35);">
+             💬 Notificar por WhatsApp a ${escapeHtml(w.name)} (${escapeHtml(w.phone)})
+           </a>`
+        : `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted); background: rgba(255,255,255,0.06); padding: 8px; border-radius: 8px; text-align: center;">
+             ⚠️ Sin celular registrado para WhatsApp
+           </div>`;
+
+      html += `
+        <div style="background: rgba(255, 255, 255, 0.04); border: 1.5px solid var(--border); border-radius: 14px; padding: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.75rem; font-weight: 800; color: #a7f3d0; text-transform: uppercase; letter-spacing: 0.05em;">
+              ${escapeHtml(w.tier)}
+            </span>
+            <span style="font-size: 1.15rem; font-weight: 900; color: #34d399;">
+              ${escapeHtml(w.prize)}
+            </span>
+          </div>
+
+          <div style="font-size: 1.1rem; font-weight: 900; color: #ffffff;">
+            Boleta <strong style="color: var(--nequi-pink); font-size: 1.35rem;">#${escapeHtml(w.num)}</strong>
+          </div>
+
+          <div style="font-size: 0.95rem; margin-top: 4px; color: var(--text-main);">
+            👤 Ganador(a): <strong>${escapeHtml(w.name)}</strong>
+          </div>
+
+          <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
+            📱 Celular: <strong>${escapeHtml(w.phone || 'Sin número')}</strong> · Estado: <span class="badge ${w.status}">${w.status.toUpperCase()}</span>
+          </div>
+
+          ${waBtn}
+        </div>
+      `;
+    });
+
+    html += `
+      </div>
+      <button class="btn-tool" onclick="copyTemplate('winner')" style="margin-top: 16px; width: 100%; padding: 10px 14px; font-size: 0.88rem; font-weight: 700;">
+        📋 Copiar Resumen de los 3 Ganadores para el Grupo de WhatsApp
+      </button>
+    `;
+
+    lotteryResultCard.innerHTML = html;
+  }
+
   // Registrar Ganador de Lotería Chontico
   btnDeclareLotteryWinner.addEventListener('click', async () => {
     const rawNumber = (lotteryInputNumber.value || '').trim();
@@ -622,26 +690,11 @@
         return;
       }
 
-      lotteryResultCard.style.display = 'block';
-      lotteryResultCard.innerHTML = `
-        <div style="font-size: 1.1rem; font-weight: 800; color: #10b981; margin-bottom: 6px;">
-          🎉 ¡Resultado Oficial Lotería Chontico: ${data.lotteryDrawn}!
-        </div>
-        <div style="font-size: 0.95rem;">
-          Número ganador en boleta: <strong style="font-size: 1.25rem; color: var(--nequi-pink);">${data.targetNum}</strong>
-        </div>
-        <div style="font-size: 1rem; margin-top: 4px;">
-          Afortunado(a): <strong>${escapeHtml(data.winnerName)}</strong>
-        </div>
-        <div style="font-size: 0.85rem; color: var(--text-muted);">
-          Celular: ${escapeHtml(data.winnerPhone || 'Sin celular')} · Estado de Boleta: <strong>${data.ticketStatus.toUpperCase()}</strong>
-        </div>
-        <button class="btn-proceed" onclick="copyTemplate('winner')" style="margin-top: 10px; padding: 8px 14px; font-size: 0.85rem;">
-          📋 Copiar Mensaje de Felicitación para WhatsApp
-        </button>
-      `;
+      if (data.winners && data.winners.length > 0) {
+        renderLotteryWinners(data.winners, data.lotteryDrawn);
+      }
 
-      showToast(`¡Ganador registrado: Número ${data.targetNum}!`, 'success');
+      showToast('¡3 Ganadores calculados y registrados exitosamente! 🏆', 'success');
       loadAdminData();
     } catch {
       showToast('Error de conexión.', 'error');

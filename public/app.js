@@ -64,6 +64,8 @@
 
   const preLaunchBanner = document.getElementById('preLaunchBanner');
   const officialWinnerBanner = document.getElementById('officialWinnerBanner');
+  const bannerLotteryInfo = document.getElementById('bannerLotteryInfo');
+  const winnersTiersContainer = document.getElementById('winnersTiersContainer');
   const bannerWinnerNum = document.getElementById('bannerWinnerNum');
   const bannerWinnerName = document.getElementById('bannerWinnerName');
   const boardCard = document.getElementById('boardCard');
@@ -145,6 +147,16 @@
     return '$' + Number(val || 0).toLocaleString('es-CO');
   }
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   // Tema Claro / Oscuro
   const savedTheme = localStorage.getItem('rifa_theme') || 
     (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -205,12 +217,37 @@
       if (liveStatusLabel) liveStatusLabel.textContent = 'En Vivo';
     }
 
-    if (config.winningNumber && config.winnerName) {
-      officialWinnerBanner.style.display = 'block';
-      bannerWinnerNum.textContent = config.winningNumber;
-      bannerWinnerName.textContent = config.winnerName;
+    if (config.winners && Array.isArray(config.winners) && config.winners.length > 0) {
+      if (officialWinnerBanner) officialWinnerBanner.style.display = 'block';
+      if (bannerLotteryInfo) {
+        bannerLotteryInfo.textContent = `Sorteo Oficial: ${config.lotteryName || 'Lotería Chontico'}`;
+      }
+      if (winnersTiersContainer) {
+        winnersTiersContainer.innerHTML = config.winners.map(w => `
+          <div style="background: rgba(0, 0, 0, 0.35); border: 1.5px solid rgba(255, 255, 255, 0.2); border-radius: 14px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+            <div>
+              <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #a7f3d0; letter-spacing: 0.05em;">
+                ${escapeHtml(w.tier)}
+              </div>
+              <div style="font-size: 1.05rem; font-weight: 900; color: #ffffff; margin-top: 3px;">
+                Boleta <strong style="color: #fde047; font-size: 1.25rem;">#${escapeHtml(w.num)}</strong> · <span>${escapeHtml(w.name)}</span>
+              </div>
+            </div>
+            <div style="text-align: right; min-width: 110px;">
+              <div style="font-size: 0.68rem; color: #d1fae5; text-transform: uppercase; font-weight: 700;">Premio Ganado</div>
+              <div style="font-size: 1.15rem; font-weight: 900; color: #34d399; letter-spacing: -0.02em;">
+                ${escapeHtml(w.prize)}
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+    } else if (config.winningNumber && config.winnerName) {
+      if (officialWinnerBanner) officialWinnerBanner.style.display = 'block';
+      if (bannerWinnerNum) bannerWinnerNum.textContent = config.winningNumber;
+      if (bannerWinnerName) bannerWinnerName.textContent = config.winnerName;
     } else {
-      officialWinnerBanner.style.display = 'none';
+      if (officialWinnerBanner) officialWinnerBanner.style.display = 'none';
     }
   }
 
@@ -648,8 +685,7 @@
     es.addEventListener('winner_announced', (e) => {
       loadData();
       try {
-        const d = JSON.parse(e.data);
-        showToast(`🏆 ¡LOTERÍA CHONTICO: NÚMERO GANADOR ${d.winningNumber}! Ganador: ${d.winnerName}`, 'success');
+        showToast('🏆 ¡LOTERÍA CHONTICO: Resultados oficiales y 3 ganadores registrados! 🎉', 'success');
         playSuccessSound();
       } catch {}
     });

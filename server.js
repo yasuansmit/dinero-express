@@ -125,6 +125,25 @@ app.get('/api/raffle', (req, res) => {
     };
   });
 
+  let winnersList = null;
+  if (cfg.winners_json) {
+    try {
+      winnersList = JSON.parse(cfg.winners_json);
+      if (Array.isArray(winnersList)) {
+        winnersList.forEach(w => {
+          if (!w.waUrl && w.phone) {
+            const cleanP = w.phone.replace(/\D/g, '');
+            const msg = `🎉 *¡FELICITACIONES ${(w.name || '').toUpperCase()}!* 🏆\n\n` +
+              `¡Acabas de ser el GANADOR de *${w.prize}* en la rifa *DINERO EXPRESS*! 💰\n` +
+              `🎯 Tu boleta ganadora fue la *${w.num}* (${w.tier}).\n\n` +
+              `Por favor confírmame tu número de Nequi para realizarte la transferencia de tu premio de inmediato. ¡Muchas felicidades! 🥳👏`;
+            w.waUrl = `https://wa.me/57${cleanP}?text=${encodeURIComponent(msg)}`;
+          }
+        });
+      }
+    } catch {}
+  }
+
   res.json({
     config: {
       name: cfg.name,
@@ -137,6 +156,7 @@ app.get('/api/raffle', (req, res) => {
       raffleStatus: cfg.raffle_status || 'active',
       winningNumber: cfg.winning_number,
       winnerName: cfg.winner_name,
+      winners: winnersList,
       flyerUrl: cfg.flyer_url || '/img/dinero-express-flyer.jpg'
     },
     numbers
@@ -351,6 +371,25 @@ app.get('/api/admin/data', requireAdmin, (req, res) => {
   const potentialAmount = (paidCount + reservedCount) * cfg.price;
   const totalGoal = cfg.total_numbers * cfg.price;
 
+  let winnersList = null;
+  if (cfg.winners_json) {
+    try {
+      winnersList = JSON.parse(cfg.winners_json);
+      if (Array.isArray(winnersList)) {
+        winnersList.forEach(w => {
+          if (!w.waUrl && w.phone) {
+            const cleanP = w.phone.replace(/\D/g, '');
+            const msg = `🎉 *¡FELICITACIONES ${(w.name || '').toUpperCase()}!* 🏆\n\n` +
+              `¡Acabas de ser el GANADOR de *${w.prize}* en la rifa *DINERO EXPRESS*! 💰\n` +
+              `🎯 Tu boleta ganadora fue la *${w.num}* (${w.tier}).\n\n` +
+              `Por favor confírmame tu número de Nequi para realizarte la transferencia de tu premio de inmediato. ¡Muchas felicidades! 🥳👏`;
+            w.waUrl = `https://wa.me/57${cleanP}?text=${encodeURIComponent(msg)}`;
+          }
+        });
+      }
+    } catch {}
+  }
+
   res.json({
     config: {
       name: cfg.name,
@@ -364,6 +403,7 @@ app.get('/api/admin/data', requireAdmin, (req, res) => {
       winningNumber: cfg.winning_number,
       winnerName: cfg.winner_name,
       winnerPhone: cfg.winner_phone,
+      winners: winnersList,
       flyerUrl: cfg.flyer_url || '/img/dinero-express-flyer.jpg'
     },
     stats: {
@@ -427,7 +467,7 @@ app.post('/api/admin/set-raffle-status', requireAdmin, (req, res) => {
   res.json({ success: true, status });
 });
 
-// Registrar resultado oficial de la Lotería Chontico
+// Registrar resultado oficial de la Lotería Chontico con 3 GANADORES PROGRESIVOS
 app.post('/api/admin/set-lottery-winner', requireAdmin, (req, res) => {
   let { rawNumber } = req.body;
   if (!rawNumber) {
@@ -436,49 +476,93 @@ app.post('/api/admin/set-lottery-winner', requireAdmin, (req, res) => {
 
   // Limpiar dígitos
   const cleanDigits = String(rawNumber).replace(/\D/g, '');
-  if (!cleanDigits) {
-    return res.status(400).json({ error: 'Número inválido.' });
+  if (cleanDigits.length < 2) {
+    return res.status(400).json({ error: 'Ingresa al menos 2 dígitos (preferiblemente las 4 cifras del Chontico).' });
   }
 
-  // Tomar las 2 últimas cifras para la cuadrícula del 01 al 100
-  let targetNum = parseInt(cleanDigits.slice(-2), 10);
-  if (targetNum === 0) targetNum = 100; // si la rifa va del 1 al 100, 00 suele ser 100
-
-  // Buscar quién tiene ese número
-  const ticket = db.prepare('SELECT * FROM numbers WHERE num = ?').get(targetNum);
   const cfg = getConfig();
+  let tiers = [];
 
-  let winnerName = 'Sin Asignar (Número no comprado)';
-  let winnerPhone = '';
-  let isPaid = false;
-
-  if (ticket && ticket.status !== 'free') {
-    winnerName = ticket.buyer_name || 'Comprador Anónimo';
-    winnerPhone = ticket.buyer_phone || '';
-    isPaid = ticket.status === 'paid';
+  function parseNumber(str) {
+    let n = parseInt(str, 10);
+    if (n === 0) n = 100;
+    return n;
   }
+
+  if (cleanDigits.length >= 4) {
+    const d4 = cleanDigits.slice(-4);
+    const n1 = parseNumber(d4.slice(0, 2));
+    const n2 = parseNumber(d4.slice(1, 3));
+    const n3 = parseNumber(d4.slice(2, 4));
+
+    tiers = [
+      { tier: '1. 2 PRIMERAS CIFRAS', num: n1, prize: '$150.000 COP' },
+      { tier: '2. 2 CIFRAS DEL MEDIO', num: n2, prize: '$150.000 COP' },
+      { tier: '3. 2 ÚLTIMAS CIFRAS', num: n3, prize: '$400.000 COP' }
+    ];
+  } else {
+    // Si solo puso 2 dígitos
+    const n = parseNumber(cleanDigits.slice(-2));
+    tiers = [
+      { tier: 'PREMIO MAYOR (2 ÚLTIMAS CIFRAS)', num: n, prize: '$400.000 COP' }
+    ];
+  }
+
+  const winners = [];
+  const stmt = db.prepare('SELECT * FROM numbers WHERE num = ?');
+
+  for (const t of tiers) {
+    const ticket = stmt.get(t.num);
+    const numFormatted = String(t.num).padStart(2, '0');
+    let name = 'Sin Asignar (Número no comprado)';
+    let phone = '';
+    let status = 'free';
+    let waUrl = null;
+
+    if (ticket && ticket.status !== 'free') {
+      name = ticket.buyer_name || 'Comprador Anónimo';
+      phone = ticket.buyer_phone || '';
+      status = ticket.status;
+
+      if (phone) {
+        const cleanP = phone.replace(/\D/g, '');
+        const msg = `🎉 *¡FELICITACIONES ${name.toUpperCase()}!* 🏆\n\n` +
+          `¡Acabas de ser el GANADOR de *${t.prize}* en la rifa *DINERO EXPRESS*! 💰\n` +
+          `🎯 Tu boleta ganadora fue la *${numFormatted}* con la *${t.tier}* en la Lotería Chontico (*${cleanDigits}*).\n\n` +
+          `Por favor confírmame tu número de Nequi para realizarte la transferencia de tu premio de inmediato. ¡Muchas felicidades! 🥳👏`;
+        waUrl = `https://wa.me/57${cleanP}?text=${encodeURIComponent(msg)}`;
+      }
+    }
+
+    winners.push({
+      tier: t.tier,
+      num: numFormatted,
+      prize: t.prize,
+      name,
+      phone,
+      status,
+      waUrl
+    });
+  }
+
+  const winnersJson = JSON.stringify(winners);
+  const mainWinner = winners[winners.length - 1]; // Premio 3 (o el último)
 
   db.prepare(`
     UPDATE config 
-    SET winning_number = ?, winner_name = ?, winner_phone = ?, raffle_status = 'finished', updated_at = ?
+    SET winning_number = ?, winner_name = ?, winner_phone = ?, winners_json = ?, raffle_status = 'finished', updated_at = ?
     WHERE id = 1
-  `).run(String(targetNum).padStart(2, '0'), winnerName, winnerPhone, Date.now());
+  `).run(mainWinner.num, mainWinner.name, mainWinner.phone, winnersJson, Date.now());
 
   broadcastEvent('winner_announced', {
-    winningNumber: String(targetNum).padStart(2, '0'),
     lotteryDrawn: cleanDigits,
-    winnerName,
-    winnerPhone,
-    isPaid
+    winners
   });
 
   res.json({
     success: true,
-    targetNum: String(targetNum).padStart(2, '0'),
     lotteryDrawn: cleanDigits,
-    winnerName,
-    winnerPhone,
-    ticketStatus: ticket ? ticket.status : 'free'
+    winners
   });
 });
 
@@ -494,6 +578,22 @@ app.get('/api/admin/whatsapp-templates', requireAdmin, (req, res) => {
   const freeCount = freeRows.length;
   const sampleFree = freeRows.slice(0, 15).map(r => String(r.num).padStart(2, '0')).join(', ');
   const moreText = freeCount > 15 ? ` y ${freeCount - 15} más...` : '';
+
+  let winnersFormatted = '';
+  if (cfg.winners_json) {
+    try {
+      const wList = JSON.parse(cfg.winners_json);
+      winnersFormatted = wList.map(w => 
+        `🏅 *${w.tier} (Boleta ${w.num})*\n` +
+        `👤 *Ganador:* ${w.name}\n` +
+        `💵 *Premio ganado:* ${w.prize}\n`
+      ).join('\n');
+    } catch {}
+  }
+
+  if (!winnersFormatted) {
+    winnersFormatted = `🎯 *Número Ganador:* ${cfg.winning_number || 'XX'}\n👤 *Afortunado(a):* ${cfg.winner_name || 'Comprador'}\n`;
+  }
 
   const templates = {
     // 1. Antes de iniciar
@@ -525,12 +625,11 @@ app.get('/api/admin/whatsapp-templates', requireAdmin, (req, res) => {
       `🎰 *Juega con:* ${cfg.lottery_name}\n` +
       `¡No te quedes por fuera del pozo millonario! 💰`,
 
-    // 4. Anuncio oficial de Ganador
-    winner: `🎉 🏆 *¡TENEMOS GANADOR OFICIAL!* 🏆 🎉\n\n` +
-      `Con el resultado de la *${cfg.lottery_name}*:\n\n` +
-      `🎯 *Número Ganador:* ${cfg.winning_number || 'XX'}\n` +
-      `👤 *Afortunado(a):* ${cfg.winner_name || 'Comprador'}\n\n` +
-      `¡Felicitaciones de parte de todo el equipo de *${cfg.name}*! 👏🥳\n` +
+    // 4. Anuncio oficial de Ganadores
+    winner: `🎉 🏆 *¡TENEMOS GANADORES OFICIALES!* 🏆 🎉\n\n` +
+      `Con el resultado oficial de la *${cfg.lottery_name}*:\n\n` +
+      `${winnersFormatted}\n` +
+      `¡Felicitaciones a todos los afortunados de *DINERO EXPRESS*! 👏🥳\n` +
       `Gracias a todos por participar. *¡Jugamos unidos, ganamos todos!* 🤝✨`
   };
 
@@ -678,11 +777,17 @@ app.post('/api/admin/draw-winner', requireAdmin, (req, res) => {
 app.post('/api/admin/reset-all', requireAdmin, (req, res) => {
   db.prepare(`
     UPDATE numbers 
-    SET status = 'free', buyer_name = NULL, buyer_phone = NULL, reserved_at = NULL, paid_at = NULL
+    SET status = 'free', buyer_name = NULL, buyer_phone = NULL, reserved_at = NULL, paid_at = NULL, proof_image = NULL
+  `).run();
+
+  db.prepare(`
+    UPDATE config
+    SET winning_number = NULL, winner_name = NULL, winner_phone = NULL, winners_json = NULL, raffle_status = 'active'
+    WHERE id = 1
   `).run();
 
   broadcastEvent('raffle_reset', {});
-  res.json({ success: true, message: 'Todos los números han sido liberados.' });
+  res.json({ success: true, message: 'Rifa reiniciada: todos los números liberados y ganadores reseteados.' });
 });
 
 // Iniciar servidor
