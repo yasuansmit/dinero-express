@@ -570,6 +570,36 @@
   });
 
   // Cargar Plantillas de WhatsApp
+  const directWinnersButtonsContainer = document.getElementById('directWinnersButtonsContainer');
+
+  function renderTemplateWinnerButtons() {
+    if (!directWinnersButtonsContainer) return;
+    if (!currentData || !currentData.config || !currentData.config.winners || !currentData.config.winners.length) {
+      directWinnersButtonsContainer.innerHTML = '';
+      return;
+    }
+
+    directWinnersButtonsContainer.innerHTML = `
+      <div style="font-size: 0.85rem; font-weight: 800; color: #a7f3d0; margin-top: 10px; margin-bottom: 6px;">
+        📲 Notificar individualmente por WhatsApp a cada ganador:
+      </div>
+    ` + currentData.config.winners.map(w => {
+      if (w.waUrl) {
+        return `
+          <a href="${w.waUrl}" target="_blank" rel="noopener noreferrer" class="action-btn wa" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px 14px; font-size: 0.88rem; font-weight: 800; border-radius: 10px; background: #25D366; color: #ffffff; text-decoration: none; margin-bottom: 4px; box-shadow: 0 3px 10px rgba(37,211,102,0.3);">
+            💬 Notificar a ${escapeHtml(w.name)} (${escapeHtml(w.phone)}) · Boleta #${w.num} (${w.prize})
+          </a>
+        `;
+      } else {
+        return `
+          <div style="font-size: 0.8rem; color: var(--text-muted); padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; text-align: center;">
+            ⚠️ Boleta #${w.num} (${escapeHtml(w.tier)}): Sin celular registrado (${escapeHtml(w.name)})
+          </div>
+        `;
+      }
+    }).join('');
+  }
+
   async function loadWhatsAppTemplates() {
     try {
       const res = await fetch('/api/admin/whatsapp-templates', {
@@ -583,6 +613,7 @@
       templateActive.textContent = cachedTemplates.active || '';
       templateRemaining.textContent = cachedTemplates.remaining || '';
       templateWinner.textContent = cachedTemplates.winner || '';
+      renderTemplateWinnerButtons();
     } catch {}
   }
 

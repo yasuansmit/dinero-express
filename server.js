@@ -39,6 +39,16 @@ function getConfig() {
   return db.prepare('SELECT * FROM config WHERE id = 1').get();
 }
 
+// Generador de enlace directo a WhatsApp (limpieza de prefijo 57 de Colombia)
+function getWaLink(phone, msg) {
+  if (!phone) return null;
+  let clean = String(phone).replace(/\D/g, '');
+  if (clean.startsWith('57') && clean.length > 10) {
+    clean = clean.slice(2);
+  }
+  return `https://wa.me/57${clean}?text=${encodeURIComponent(msg)}`;
+}
+
 // Liberar automáticamente números vencidos (> 20 min)
 function cleanExpiredReservations() {
   const cfg = getConfig();
@@ -132,12 +142,11 @@ app.get('/api/raffle', (req, res) => {
       if (Array.isArray(winnersList)) {
         winnersList.forEach(w => {
           if (!w.waUrl && w.phone) {
-            const cleanP = w.phone.replace(/\D/g, '');
             const msg = `🎉 *¡FELICITACIONES ${(w.name || '').toUpperCase()}!* 🏆\n\n` +
               `¡Acabas de ser el GANADOR de *${w.prize}* en la rifa *DINERO EXPRESS*! 💰\n` +
               `🎯 Tu boleta ganadora fue la *${w.num}* (${w.tier}).\n\n` +
               `Por favor confírmame tu número de Nequi para realizarte la transferencia de tu premio de inmediato. ¡Muchas felicidades! 🥳👏`;
-            w.waUrl = `https://wa.me/57${cleanP}?text=${encodeURIComponent(msg)}`;
+            w.waUrl = getWaLink(w.phone, msg);
           }
         });
       }
@@ -378,12 +387,11 @@ app.get('/api/admin/data', requireAdmin, (req, res) => {
       if (Array.isArray(winnersList)) {
         winnersList.forEach(w => {
           if (!w.waUrl && w.phone) {
-            const cleanP = w.phone.replace(/\D/g, '');
             const msg = `🎉 *¡FELICITACIONES ${(w.name || '').toUpperCase()}!* 🏆\n\n` +
               `¡Acabas de ser el GANADOR de *${w.prize}* en la rifa *DINERO EXPRESS*! 💰\n` +
               `🎯 Tu boleta ganadora fue la *${w.num}* (${w.tier}).\n\n` +
               `Por favor confírmame tu número de Nequi para realizarte la transferencia de tu premio de inmediato. ¡Muchas felicidades! 🥳👏`;
-            w.waUrl = `https://wa.me/57${cleanP}?text=${encodeURIComponent(msg)}`;
+            w.waUrl = getWaLink(w.phone, msg);
           }
         });
       }
@@ -525,12 +533,11 @@ app.post('/api/admin/set-lottery-winner', requireAdmin, (req, res) => {
       status = ticket.status;
 
       if (phone) {
-        const cleanP = phone.replace(/\D/g, '');
         const msg = `🎉 *¡FELICITACIONES ${name.toUpperCase()}!* 🏆\n\n` +
           `¡Acabas de ser el GANADOR de *${t.prize}* en la rifa *DINERO EXPRESS*! 💰\n` +
           `🎯 Tu boleta ganadora fue la *${numFormatted}* con la *${t.tier}* en la Lotería Chontico (*${cleanDigits}*).\n\n` +
           `Por favor confírmame tu número de Nequi para realizarte la transferencia de tu premio de inmediato. ¡Muchas felicidades! 🥳👏`;
-        waUrl = `https://wa.me/57${cleanP}?text=${encodeURIComponent(msg)}`;
+        waUrl = getWaLink(phone, msg);
       }
     }
 
