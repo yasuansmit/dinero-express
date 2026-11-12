@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#20002c">
+  <title>Gran Rifa Digital · Escoge tu número</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Contenedor Toast para avisos elegantes -->
+  <div class="toast-container" id="toastBox"></div>
+
+  <div class="container">
+    
+    <!-- Hero Banner Fintech Nequi -->
+    <header class="hero-card">
+      <div class="top-bar-row">
+        <div class="badge-live">
+          <span class="dot-live"></span>
+          <span>Actualización en Vivo</span>
+        </div>
+        <button class="theme-toggle-btn" id="themeToggle" title="Modo Claro/Oscuro">🌓</button>
+      </div>
+
+      <h1 class="hero-title" id="raffleName">Cargando Rifa...</h1>
+      
+      <!-- Premio -->
+      <div class="prize-banner">
+        <div class="prize-icon">🏆</div>
+        <div>
+          <div class="prize-details-label">Gran Premio</div>
+          <div class="prize-details-val" id="rafflePrize">Cargando detalles...</div>
+        </div>
+      </div>
+
+      <!-- Barra de Progreso y Precio -->
+      <div style="margin-bottom: 12px;">
+        <div class="progress-meta-row">
+          <span>Boletas Pagadas / Reservadas</span>
+          <strong id="progressPctText">0%</strong>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFillBar"></div>
+        </div>
+      </div>
+
+      <div class="hero-stats-row">
+        <div>
+          <div style="font-size: 0.72rem; color: rgba(255,255,255,0.7); text-transform: uppercase; font-weight:700;">Valor por número</div>
+          <div class="hero-price-val" id="rafflePrice">$0 COP</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 0.72rem; color: rgba(255,255,255,0.7); text-transform: uppercase; font-weight:700;">Medio de Pago</div>
+          <div style="font-size: 1rem; font-weight: 800; color: #ffffff;">Nequi 📲</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Leyenda de Estados -->
+    <section class="legend-strip">
+      <div class="legend-tag">
+        <span class="legend-swatch" style="background:var(--free-bg); border-color:var(--free-border)"></span>
+        <span>Libre (<span id="countFree">0</span>)</span>
+      </div>
+      <div class="legend-tag">
+        <span class="legend-swatch" style="background:var(--res-bg); border-color:var(--res-border)"></span>
+        <span>Apartado (<span id="countReserved">0</span>)</span>
+      </div>
+      <div class="legend-tag">
+        <span class="legend-swatch" style="background:var(--paid-bg); border-color:var(--paid-border)"></span>
+        <span>Pagado (<span id="countPaid">0</span>)</span>
+      </div>
+      <div class="legend-tag">
+        <span class="legend-swatch" style="background:var(--nequi-pink); border-color:var(--nequi-pink)"></span>
+        <span>Tu Selección</span>
+      </div>
+    </section>
+
+    <!-- Herramientas Rápidas -->
+    <div class="tools-strip" style="flex-wrap: wrap;">
+      <div style="display:flex; gap:6px; flex: 1; min-width: 180px;">
+        <input class="field-input" type="number" id="searchQuickNum" min="1" max="100" placeholder="🔍 Buscar N° (ej. 42)" style="padding: 8px 12px; font-size: 0.85rem; font-weight:700;">
+        <button class="btn-tool" id="btnQuickSelect">Ir</button>
+      </div>
+
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button class="btn-tool" id="btnLuckyNumber">
+          <span>🎲</span>
+          <span>De la Suerte</span>
+        </button>
+        <button class="btn-tool" id="btnClearSelection" style="display:none; color: #ef4444;">
+          <span>✕</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Cuadrícula de Números -->
+    <main class="board-card">
+      <div class="grid-numbers" id="numbersGrid">
+        <!-- Renderizado dinámico -->
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <p>Plataforma automatizada para rifas transparentes vía WhatsApp.</p>
+      <p style="margin-top: 6px;">
+        <a href="admin.html">🔐 Acceso a Panel de Organizadora</a>
+      </p>
+    </footer>
+
+  </div>
+
+  <!-- Barra Flotante de Compra (Mobile-first) -->
+  <div class="drawer-bar closed" id="bottomBar">
+    <div class="drawer-info">
+      <span class="drawer-nums-preview" id="barNumbers">Ninguno seleccionado</span>
+      <span class="drawer-total" id="barTotal">$0 COP</span>
+    </div>
+    <button class="btn-proceed" id="btnOpenReserveModal">
+      <span>Reservar y Pagar</span>
+      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+    </button>
+  </div>
+
+  <!-- Modal 1: Formulario de Registro de Comprador -->
+  <div class="overlay-wrap" id="reserveModal">
+    <div class="popup-card">
+      <div class="popup-head">
+        <h3 style="font-size: 1.25rem; font-weight: 800;">Completa tus datos</h3>
+        <button class="btn-dismiss" id="btnCloseReserveModal">&times;</button>
+      </div>
+
+      <div style="background: var(--bg-main); border: 1.5px dashed var(--border); border-radius: 14px; padding: 12px 14px; margin-bottom: 16px;">
+        <div style="display:flex; justify-content:space-between; font-size: 0.82rem; color: var(--text-muted);">
+          <span>Números a reservar:</span>
+          <strong id="modalNumbersText" style="color: var(--nequi-pink); font-size: 0.95rem;">-</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size: 1.05rem; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border);">
+          <span style="font-weight: 700;">Total a transferir:</span>
+          <strong id="modalTotalText" style="font-weight: 900; color: var(--text-main);">$0 COP</strong>
+        </div>
+      </div>
+
+      <form id="reserveForm">
+        <div class="field-box">
+          <label class="field-label" for="buyerName">Nombre y Apellido *</label>
+          <input class="field-input" type="text" id="buyerName" placeholder="Tu nombre completo" required autocomplete="name">
+        </div>
+
+        <div class="field-box">
+          <label class="field-label" for="buyerPhone">Celular / WhatsApp *</label>
+          <input class="field-input" type="tel" id="buyerPhone" placeholder="Ej. 3101234567" required autocomplete="tel" inputmode="numeric">
+        </div>
+
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
+          🔒 Tus números quedan bloqueados para ti durante <strong>20 minutos</strong>. Si no envías el comprobante en ese tiempo, el sistema los vuelve a liberar automáticamente.
+        </p>
+
+        <button type="submit" class="btn-proceed" id="btnSubmitReserve" style="width: 100%; justify-content: center; padding: 14px;">
+          Confirmar Reserva y Ver Nequi
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Instrucciones Nequi y WhatsApp -->
+  <div class="overlay-wrap" id="paymentModal">
+    <div class="popup-card">
+      <div class="popup-head">
+        <div>
+          <span style="font-size: 0.75rem; font-weight: 800; color: var(--nequi-pink);" id="payRefCode">REF-0000</span>
+          <h3 style="font-size: 1.3rem; font-weight: 800;">¡Números Reservados! 🎉</h3>
+        </div>
+        <button class="btn-dismiss" id="btnClosePaymentModal">&times;</button>
+      </div>
+
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+        Transfiere desde tu app Nequi por el valor exacto y presiona el botón verde para enviar tu comprobante a la organizadora.
+      </p>
+
+      <!-- Tarjeta Nequi Oficial -->
+      <div class="receipt-card">
+        <div class="nequi-logo-badge">NEQUI COLOMBIA</div>
+        <div style="font-size: 0.75rem; opacity: 0.8; margin-bottom: 2px;">Número Nequi para transferir:</div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+          <span class="nequi-acc-number" id="payNequiNumber">300 000 0000</span>
+          <button class="btn-copy-chip" id="btnCopyNequi">Copiar</button>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top: 1px solid rgba(255,255,255,0.18); padding-top: 10px; margin-top: 8px;">
+          <span style="font-size: 0.85rem; font-weight: 600;">Total a enviar:</span>
+          <span style="font-size: 1.3rem; font-weight: 900; color: #fde047;" id="payTotalAmount">$0 COP</span>
+        </div>
+      </div>
+
+      <div style="background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px;">
+        <div style="font-size: 0.8rem; color: var(--text-muted);">Tus boletas reservadas:</div>
+        <div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main);" id="payNumbersList">-</div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap: 8px; background: #fffbeb; border: 1px solid #fde68a; color: #b45309; padding: 8px 12px; border-radius: 10px; font-size: 0.82rem; font-weight: 700; margin-bottom: 12px;">
+        <span>⏱️</span>
+        <span>Tienes <strong id="countdownTimer">20:00</strong> para transferir antes de que se liberen.</span>
+      </div>
+
+      <!-- Sección de Subida de Comprobante Directo -->
+      <div style="background: var(--bg-main); border: 1.5px dashed var(--border); border-radius: 14px; padding: 12px; margin-bottom: 12px; text-align: center;">
+        <div style="font-size: 0.8rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">
+          📸 ¿Ya pagaste? Sube tu captura aquí (Opcional):
+        </div>
+        <input type="file" id="proofFileInput" accept="image/*" style="display:none;">
+        <button type="button" class="btn-tool" id="btnSelectProofFile" style="margin: 6px auto; font-size: 0.78rem;">
+          📎 Seleccionar Foto de Nequi
+        </button>
+        <div id="proofFileName" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;"></div>
+        <button type="button" class="btn-proceed" id="btnUploadProof" style="display:none; width: 100%; justify-content: center; padding: 8px 12px; font-size: 0.8rem; margin-top: 8px;">
+          📤 Enviar Comprobante al Sistema
+        </button>
+      </div>
+
+      <a id="btnSendWhatsApp" href="#" target="_blank" class="btn-wa-cta">
+        <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.969.587 1.83.896 2.796.896 3.183 0 5.769-2.587 5.769-5.766.001-3.181-2.585-5.767-5.769-5.767zm0-2c4.28 0 7.769 3.489 7.769 7.767 0 4.28-3.489 7.766-7.769 7.766-1.258 0-2.433-.314-3.488-.871l-5.543 1.453 1.48-5.409c-.649-1.099-1.018-2.378-1.018-3.705 0-4.28 3.489-7.767 7.769-7.767z"/></svg>
+        <span>Enviar Comprobante por WhatsApp</span>
+      </a>
+
+      <p style="text-align: center; font-size: 0.72rem; color: var(--text-muted); margin-top: 10px;">
+        Al hacer clic se abrirá tu WhatsApp con el mensaje ya redactado hacia la organizadora.
+      </p>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
