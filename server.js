@@ -577,12 +577,12 @@ app.post('/api/admin/set-batch-status', requireAdmin, (req, res) => {
 
   const now = Date.now();
   if (status === 'paid') {
-    const stmt = db.prepare('UPDATE numbers SET status = "paid", paid_at = ? WHERE num = ?');
+    const stmt = db.prepare("UPDATE numbers SET status = 'paid', paid_at = ? WHERE num = ?");
     for (const num of numbers) {
       stmt.run(now, num);
     }
   } else if (status === 'free') {
-    const stmt = db.prepare('UPDATE numbers SET status = "free", buyer_name = NULL, buyer_phone = NULL, reserved_at = NULL, paid_at = NULL, proof_image = NULL WHERE num = ?');
+    const stmt = db.prepare("UPDATE numbers SET status = 'free', buyer_name = NULL, buyer_phone = NULL, reserved_at = NULL, paid_at = NULL, proof_image = NULL WHERE num = ?");
     for (const num of numbers) {
       stmt.run(num);
     }
