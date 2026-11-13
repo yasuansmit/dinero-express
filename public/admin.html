@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=6.0">
+  <link rel="stylesheet" href="style.css?v=7.0">
   <style>
     .admin-box {
       max-width: 860px;
@@ -311,6 +311,16 @@
 
     <!-- SECCIÓN 1: Compradores y Pagos -->
     <section id="sectionBuyers">
+      <!-- Selector de Tablas para la Administradora -->
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+        <div id="adminTableSelector" style="display:flex; gap:8px; align-items:center; overflow-x:auto;">
+          <!-- Pestañas de tablas dinámicas -->
+        </div>
+        <button type="button" class="btn-proceed" id="btnAdminAddTable" style="padding: 9px 16px; font-size: 0.88rem; font-weight: 800; background: #8b5cf6; white-space: nowrap; box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);">
+          ➕ Abrir Nueva Tabla
+        </button>
+      </div>
+
       <div class="controls-row">
         <input class="field-input" type="text" id="searchBuyer" placeholder="🔍 Buscar por número, comprador o celular..." style="flex: 1; min-width: 220px; padding: 10px 14px;">
         
@@ -497,6 +507,17 @@
           </button>
         </form>
 
+        <!-- Gestión de Tablas y Pozos Acumulados -->
+        <div style="background: var(--bg-main); border: 1.5px solid var(--border); border-radius: 16px; padding: 18px; margin-top: 20px;">
+          <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 6px;">🎰 Gestión de Tablas y Pozos Acumulados</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+            Configura el pozo acumulado y el incremento por rifa para cada tabla.
+          </p>
+          <div id="adminTablesConfigList" style="display:flex; flex-direction:column; gap: 10px;">
+            <!-- Renderizado dinámico de tablas -->
+          </div>
+        </div>
+
         <hr style="border:0; border-top: 1px solid var(--border); margin: 24px 0;">
 
         <div style="background: rgba(239, 68, 68, 0.08); border: 1.5px dashed #fca5a5; border-radius: 14px; padding: 16px;">
@@ -536,6 +557,6 @@
     </div>
   </div>
 
-  <script src="admin.js?v=6.0"></script>
+  <script src="admin.js?v=7.0"></script>
 </body>
 </html>

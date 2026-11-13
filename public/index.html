@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=6.0">
+  <link rel="stylesheet" href="style.css?v=7.0">
   <style>
     /* Estilos especiales para el Sorteo Progresivo Dinero Express */
     .flyer-thumbnail-card {
@@ -164,7 +164,7 @@
         </div>
         <div class="prize-tier" style="margin-top: 4px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.2);">
           <span style="font-weight: 800; color: #ffffff;">💰 POZO ACUMULADO:</span>
-          <strong style="color: #fde047; font-size: 1.15rem; font-weight: 900;">$5.000.000</strong>
+          <strong style="color: #fde047; font-size: 1.15rem; font-weight: 900;" id="heroPozoAmount">$5.000.000</strong>
         </div>
       </div>
 
@@ -240,6 +240,11 @@
           💳 PAGAR (<span id="topPayCount">0</span>)
         </button>
       </div>
+    </div>
+
+    <!-- Selector de Tablas -->
+    <div id="tableTabsContainer" style="display: flex; gap: 6px; padding: 8px 0; overflow-x: auto; margin-bottom: 4px;">
+      <!-- Se llena dinámicamente -->
     </div>
 
     <!-- Cuadrícula de Números -->
@@ -405,6 +410,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=6.0"></script>
+  <script src="app.js?v=7.0"></script>
 </body>
 </html>
