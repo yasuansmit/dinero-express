@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=7.0">
+  <link rel="stylesheet" href="style.css?v=8.0">
   <style>
     /* Estilos especiales para el Sorteo Progresivo Dinero Express */
     .flyer-thumbnail-card {
@@ -227,7 +227,11 @@
         <button class="btn-tool" id="btnQuickSelect">Ir</button>
       </div>
 
-      <div style="display:flex; gap:6px; align-items:center;">
+      <div style="display:flex; gap:6px; align-items:center; flex-wrap: wrap;">
+        <button class="btn-tool" id="btnMyTickets" title="Ver las boletas que has apartado o pagado" style="background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #3b82f6; font-weight:700;">
+          <span>🔍</span>
+          <span>Mis Boletas</span>
+        </button>
         <button class="btn-tool" id="btnLuckyNumber">
           <span>🎲</span>
           <span>Suerte</span>
@@ -363,9 +367,9 @@
         <div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main);" id="payNumbersList">-</div>
       </div>
 
-      <div style="display:flex; align-items:center; gap: 8px; background: #fffbeb; border: 1px solid #fde68a; color: #b45309; padding: 8px 12px; border-radius: 10px; font-size: 0.82rem; font-weight: 700; margin-bottom: 12px;">
-        <span>⏱️</span>
-        <span>Tienes <strong id="countdownTimer">20:00</strong> para transferir antes de que se liberen.</span>
+      <div id="countdownBox" style="display:flex; align-items:center; gap: 8px; background: #fffbeb; border: 1px solid #fde68a; color: #b45309; padding: 8px 12px; border-radius: 10px; font-size: 0.82rem; font-weight: 700; margin-bottom: 12px; transition: all 0.3s ease;">
+        <span id="countdownIcon">⏱️</span>
+        <span id="countdownMsg">Tienes <strong id="countdownTimer">20:00</strong> para transferir antes de que se liberen.</span>
       </div>
 
       <!-- Subida de Comprobante -->
@@ -410,6 +414,39 @@
     </div>
   </div>
 
-  <script src="app.js?v=7.0"></script>
+  <!-- Modal 4: Consultar Mis Boletas -->
+  <div class="overlay-wrap" id="myTicketsModal">
+    <div class="popup-card" style="max-width: 440px;">
+      <div class="popup-head">
+        <div>
+          <h3 style="font-size: 1.15rem; font-weight: 800;">🔍 Mis Boletas</h3>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">Consulta los números que tienes apartados o pagados.</p>
+        </div>
+        <button class="btn-dismiss" id="btnCloseMyTicketsModal">&times;</button>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label class="field-label" for="myTicketsPhone">Número de Celular Nequi</label>
+        <div style="display:flex; gap: 6px;">
+          <input class="field-input" type="tel" id="myTicketsPhone" placeholder="Ej: 3216139972" maxlength="10" style="font-size: 1rem; font-weight:700;">
+          <button class="btn-proceed" id="btnSearchMyTickets" style="padding: 8px 16px; font-size: 0.88rem; white-space: nowrap;">
+            Buscar
+          </button>
+        </div>
+      </div>
+
+      <!-- Contenedor de Resultados -->
+      <div id="myTicketsResultBox" style="display:none;">
+        <div id="myTicketsEmpty" style="display:none; text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.88rem;">
+          No se encontraron boletas asociadas a este número de celular.
+        </div>
+        <div id="myTicketsList" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+          <!-- Items generados dinámicamente -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=8.0"></script>
 </body>
 </html>

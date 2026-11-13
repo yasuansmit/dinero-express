@@ -346,6 +346,8 @@
     const tableName = ct ? ct.name : '';
     modalNumbersText.textContent = list.map(n => String(n).padStart(2, '0')).join(', ') + (tableName ? ` (${tableName})` : '');
     modalTotalText.textContent = formatCOP(list.length * config.price) + ' COP';
+    if (buyerName && !buyerName.value) buyerName.value = localStorage.getItem('buyerName') || '';
+    if (buyerPhone && !buyerPhone.value) buyerPhone.value = localStorage.getItem('buyerPhone') || '';
     reserveModal.style.display = 'flex';
   }
 
@@ -374,10 +376,12 @@
     btnSubmitReserve.disabled = true;
     btnSubmitReserve.textContent = 'Procesando reserva...';
     try {
+      const bName = buyerName.value.trim();
+      const bPhone = buyerPhone.value.trim();
       const res = await fetch('/api/reserve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tableId: currentTableId, numbers: list, name: buyerName.value.trim(), phone: buyerPhone.value.trim() })
+        body: JSON.stringify({ tableId: currentTableId, numbers: list, name: bName, phone: bPhone })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -385,6 +389,8 @@
         if (data.unavailable) { data.unavailable.forEach(n => selectedNumbers.delete(n)); renderGrid(); }
         return;
       }
+      localStorage.setItem('buyerName', bName);
+      localStorage.setItem('buyerPhone', bPhone);
       reserveModal.style.display = 'none';
       selectedNumbers.clear();
       currentReservedNumbers = data.reservedNumbers || [];
@@ -407,15 +413,38 @@
     paymentModal.style.display = 'flex';
   }
 
+  const countdownBox = document.getElementById('countdownBox');
+  const countdownIcon = document.getElementById('countdownIcon');
+  const countdownMsg = document.getElementById('countdownMsg');
+
   function startTimer(expiresAt) {
     if (countdownInterval) clearInterval(countdownInterval);
     function update() {
       const rem = Math.max(0, expiresAt - Date.now());
       const sec = Math.floor(rem / 1000), m = Math.floor(sec / 60), s = sec % 60;
-      countdownTimer.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-      if (rem <= 0) { clearInterval(countdownInterval); countdownTimer.textContent = '¡Expirado!'; }
+      const timeStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      if (countdownTimer) countdownTimer.textContent = timeStr;
+
+      // Alerta de urgencia cuando quedan 5 minutos o menos
+      if (rem > 0 && rem <= 5 * 60 * 1000) {
+        if (countdownBox) countdownBox.classList.add('urgent-timer');
+        if (countdownIcon) countdownIcon.textContent = '🚨';
+        if (countdownMsg) {
+          countdownMsg.innerHTML = `⚠️ ¡ÚLTIMOS <strong id="countdownTimer" style="font-size:1.05rem;">${timeStr}</strong>! Transfiere ya a Nequi o se liberarán.`;
+        }
+      } else {
+        if (countdownBox) countdownBox.classList.remove('urgent-timer');
+        if (countdownIcon) countdownIcon.textContent = '⏱️';
+      }
+
+      if (rem <= 0) {
+        clearInterval(countdownInterval);
+        if (countdownTimer) countdownTimer.textContent = '¡Expirado!';
+        if (countdownBox) countdownBox.classList.remove('urgent-timer');
+      }
     }
-    update(); countdownInterval = setInterval(update, 1000);
+    update();
+    countdownInterval = setInterval(update, 1000);
   }
 
   // Quick search
@@ -475,22 +504,153 @@
   if (btnOpenFlyerModal) btnOpenFlyerModal.onclick = () => flyerModal.style.display = 'flex';
   if (btnCloseFlyerModal) btnCloseFlyerModal.onclick = () => flyerModal.style.display = 'none';
   if (btnCloseFlyerBtn) btnCloseFlyerBtn.onclick = () => flyerModal.style.display = 'none';
-  window.addEventListener('click', (e) => { if (e.target === reserveModal) reserveModal.style.display = 'none'; if (e.target === paymentModal) paymentModal.style.display = 'none'; });
+
+  // --- Mis Boletas Modal & Search ---
+  const btnMyTickets = document.getElementById('btnMyTickets');
+  const myTicketsModal = document.getElementById('myTicketsModal');
+  const btnCloseMyTicketsModal = document.getElementById('btnCloseMyTicketsModal');
+  const myTicketsPhone = document.getElementById('myTicketsPhone');
+  const btnSearchMyTickets = document.getElementById('btnSearchMyTickets');
+  const myTicketsResultBox = document.getElementById('myTicketsResultBox');
+  const myTicketsList = document.getElementById('myTicketsList');
+  const myTicketsEmpty = document.getElementById('myTicketsEmpty');
+
+  if (btnMyTickets) {
+    btnMyTickets.addEventListener('click', () => {
+      const savedPhone = localStorage.getItem('buyerPhone') || '';
+      if (savedPhone) myTicketsPhone.value = savedPhone;
+      myTicketsModal.style.display = 'flex';
+      if (savedPhone) fetchMyTickets(savedPhone);
+    });
+  }
+  if (btnCloseMyTicketsModal) {
+    btnCloseMyTicketsModal.addEventListener('click', () => {
+      myTicketsModal.style.display = 'none';
+    });
+  }
+
+  async function fetchMyTickets(phone) {
+    phone = (phone || '').replace(/\D/g, '');
+    if (!phone || phone.length < 7) {
+      showToast('Ingresa tu número de celular.', 'error');
+      return;
+    }
+    localStorage.setItem('buyerPhone', phone);
+    btnSearchMyTickets.disabled = true;
+    btnSearchMyTickets.textContent = 'Buscando...';
+
+    try {
+      const res = await fetch(`/api/my-tickets?phone=${encodeURIComponent(phone)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || 'Error al buscar boletas.', 'error');
+        return;
+      }
+
+      myTicketsResultBox.style.display = 'block';
+      if (!data.tickets || data.tickets.length === 0) {
+        myTicketsEmpty.style.display = 'block';
+        myTicketsList.innerHTML = '';
+        return;
+      }
+
+      myTicketsEmpty.style.display = 'none';
+      myTicketsList.innerHTML = data.tickets.map(t => {
+        const isPaid = t.status === 'paid';
+        const statusLabel = isPaid ? '✅ Pagado' : '⏳ Apartado';
+        const badgeBg = isPaid ? '#dcfce7' : '#fef3c7';
+        const badgeColor = isPaid ? '#15803d' : '#b45309';
+
+        return `
+          <div class="my-ticket-card">
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">${escapeHtml(t.tableName)}</div>
+              <div style="font-size:1.15rem; font-weight:900; color:var(--text-main);">
+                Boleta <strong style="color:var(--nequi-pink);">#${String(t.num).padStart(2, '0')}</strong>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="background:${badgeBg}; color:${badgeColor}; font-weight:800; font-size:0.78rem; padding:4px 8px; border-radius:8px;">
+                ${statusLabel}
+              </span>
+              <button class="btn-tool btn-view-on-grid" data-table="${t.tableId}" data-num="${t.num}" style="font-size:0.78rem; padding:6px 10px;">
+                Ver en tablero
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      myTicketsList.querySelectorAll('.btn-view-on-grid').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tableId = parseInt(btn.getAttribute('data-table'), 10);
+          const num = parseInt(btn.getAttribute('data-num'), 10);
+          myTicketsModal.style.display = 'none';
+
+          if (currentTableId !== tableId) {
+            currentTableId = tableId;
+            renderTabs();
+          }
+          renderGrid();
+
+          setTimeout(() => {
+            const btns = numbersGrid.querySelectorAll('.ticket-num');
+            const targetBtn = btns[num - 1];
+            if (targetBtn) {
+              targetBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              targetBtn.classList.add('my-highlight');
+              setTimeout(() => targetBtn.classList.remove('my-highlight'), 6000);
+            }
+          }, 200);
+        });
+      });
+
+    } catch (err) {
+      showToast('Error de conexión al buscar.', 'error');
+    } finally {
+      btnSearchMyTickets.disabled = false;
+      btnSearchMyTickets.textContent = 'Buscar';
+    }
+  }
+
+  if (btnSearchMyTickets) {
+    btnSearchMyTickets.addEventListener('click', () => fetchMyTickets(myTicketsPhone.value));
+  }
+  if (myTicketsPhone) {
+    myTicketsPhone.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') fetchMyTickets(myTicketsPhone.value);
+    });
+  }
+
+  window.addEventListener('click', (e) => {
+    if (e.target === reserveModal) reserveModal.style.display = 'none';
+    if (e.target === paymentModal) paymentModal.style.display = 'none';
+    if (e.target === myTicketsModal) myTicketsModal.style.display = 'none';
+  });
+
+  // Debounced loadData para soportar 150+ conexiones simultáneas sin colapsar el backend
+  let sseDebounce = null;
+  function debouncedLoadData() {
+    if (sseDebounce) clearTimeout(sseDebounce);
+    sseDebounce = setTimeout(() => {
+      loadData();
+    }, 250);
+  }
 
   // SSE
   function connectSSE() {
     const es = new EventSource('/api/events');
-    es.addEventListener('numbers_updated', () => loadData());
-    es.addEventListener('numbers_released', () => { loadData(); showToast('Se liberaron boletas vencidas.', 'info'); });
+    es.addEventListener('numbers_updated', () => debouncedLoadData());
+    es.addEventListener('numbers_released', () => { debouncedLoadData(); showToast('Se liberaron boletas vencidas.', 'info'); });
     es.addEventListener('raffle_status_changed', (e) => {
-      loadData();
+      debouncedLoadData();
       try { const d = JSON.parse(e.data); if (d.status === 'active') { showToast('🔥 ¡VENTAS ABIERTAS!', 'success'); playSuccessSound(); } } catch {}
     });
-    es.addEventListener('winner_announced', () => { loadData(); showToast('🏆 ¡RESULTADOS OFICIALES DE LOTERÍA CHONTICO! 🎉', 'success'); playSuccessSound(); });
-    es.addEventListener('config_updated', () => loadData());
-    es.addEventListener('table_added', () => { loadData(); showToast('Se ha abierto una nueva tabla.', 'info'); });
-    es.addEventListener('table_removed', () => { loadData(); });
-    es.addEventListener('raffle_reset', () => { selectedNumbers.clear(); loadData(); showToast('La rifa ha sido reiniciada.', 'info'); });
+    es.addEventListener('winner_announced', () => { debouncedLoadData(); showToast('🏆 ¡RESULTADOS OFICIALES DE LOTERÍA CHONTICO! 🎉', 'success'); playSuccessSound(); });
+    es.addEventListener('config_updated', () => debouncedLoadData());
+    es.addEventListener('table_added', () => { debouncedLoadData(); showToast('Se ha abierto una nueva tabla.', 'info'); });
+    es.addEventListener('table_removed', () => { debouncedLoadData(); });
+    es.addEventListener('raffle_reset', () => { selectedNumbers.clear(); debouncedLoadData(); showToast('La rifa ha sido reiniciada.', 'info'); });
     es.onerror = () => {};
   }
 

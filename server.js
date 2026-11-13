@@ -86,6 +86,23 @@ app.get('/api/events', (req, res) => {
   req.on('close', () => sseClients.delete(res));
 });
 
+// --- Control de Intentos de Acceso y Anti-Spam ---
+const loginAttempts = new Map();
+const reserveRateLimits = new Map();
+
+function checkReserveRateLimit(ip) {
+  const now = Date.now();
+  const windowMs = 60000;
+  const maxRequests = 8;
+  const timestamps = (reserveRateLimits.get(ip) || []).filter(t => now - t < windowMs);
+  if (timestamps.length >= maxRequests) {
+    return false;
+  }
+  timestamps.push(now);
+  reserveRateLimits.set(ip, timestamps);
+  return true;
+}
+
 // --- Admin Auth ---
 function requireAdmin(req, res, next) {
   const pin = req.headers['x-admin-pin'] || req.query.pin;
@@ -100,7 +117,6 @@ function requireAdmin(req, res, next) {
 
 // GET /api/raffle - Datos públicos con todas las tablas
 app.get('/api/raffle', (req, res) => {
-  cleanExpiredReservations();
   const cfg = getConfig();
   const tables = getTables();
   const now = Date.now();
@@ -151,9 +167,44 @@ app.get('/api/raffle', (req, res) => {
   });
 });
 
+// GET /api/my-tickets - Buscar boletas por número de celular del comprador
+app.get('/api/my-tickets', (req, res) => {
+  let phone = (req.query.phone || '').replace(/\D/g, '');
+  if (phone.startsWith('57') && phone.length === 12) phone = phone.slice(2);
+  if (!phone || phone.length < 7) {
+    return res.status(400).json({ error: 'Ingresa tu número de celular para buscar tus boletas.' });
+  }
+
+  const rows = db.prepare(`
+    SELECT n.num, n.status, n.buyer_name, n.reserved_at, n.paid_at, n.table_id, t.name as table_name
+    FROM numbers n
+    JOIN raffle_tables t ON n.table_id = t.id
+    WHERE n.buyer_phone = ? OR n.buyer_phone LIKE ?
+    ORDER BY n.table_id ASC, n.num ASC
+  `).all(phone, `%${phone}%`);
+
+  res.json({
+    phone,
+    count: rows.length,
+    tickets: rows.map(r => ({
+      num: r.num,
+      status: r.status,
+      tableId: r.table_id,
+      tableName: r.table_name,
+      buyerName: r.buyer_name,
+      reservedAt: r.reserved_at,
+      paidAt: r.paid_at
+    }))
+  });
+});
+
 // POST /api/reserve - Reservar números en una tabla específica
 app.post('/api/reserve', (req, res) => {
-  cleanExpiredReservations();
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  if (!checkReserveRateLimit(ip)) {
+    return res.status(429).json({ error: 'Demasiadas solicitudes de reserva en poco tiempo. Por favor espera un momento.' });
+  }
+
   const cfg = getConfig();
 
   if (cfg.raffle_status === 'pre_launch') {
@@ -175,10 +226,22 @@ app.post('/api/reserve', (req, res) => {
     return res.status(400).json({ error: 'Debes seleccionar al menos un número.' });
   }
 
+  if (numbers.length > 10) {
+    return res.status(400).json({ error: 'Puedes apartar máximo 10 boletas por reserva para dar oportunidad a todos.' });
+  }
+
   const cleanName = (name || '').trim();
-  const cleanPhone = (phone || '').replace(/\D/g, '');
-  if (!cleanName || cleanPhone.length < 7) {
-    return res.status(400).json({ error: 'Por favor ingresa tu nombre y un celular válido.' });
+  let cleanPhone = (phone || '').replace(/\D/g, '');
+  if (cleanPhone.startsWith('57') && cleanPhone.length === 12) {
+    cleanPhone = cleanPhone.slice(2);
+  }
+
+  if (!cleanName || cleanName.length < 2) {
+    return res.status(400).json({ error: 'Por favor ingresa tu nombre completo.' });
+  }
+
+  if (!/^3\d{9}$/.test(cleanPhone)) {
+    return res.status(400).json({ error: 'Ingresa un número de celular colombiano válido (10 dígitos que empiece por 3, ej: 3216139972).' });
   }
   if (!cfg.nequi) {
     return res.status(400).json({ error: 'La organizadora aún no ha configurado el número de Nequi.' });
@@ -279,10 +342,32 @@ app.post('/api/upload-proof', (req, res) => {
 // ===================== ENDPOINTS ADMIN =====================
 
 app.post('/api/admin/verify', (req, res) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const attempt = loginAttempts.get(ip) || { count: 0, blockedUntil: 0 };
+
+  if (attempt.blockedUntil > now) {
+    const minsLeft = Math.ceil((attempt.blockedUntil - now) / 60000);
+    return res.status(429).json({ error: `Demasiados intentos fallidos. Acceso bloqueado por seguridad. Espera ${minsLeft} minuto(s).` });
+  }
+
   const { pin } = req.body;
   const cfg = getConfig();
-  if (pin && String(pin).trim() === String(cfg.admin_pin).trim()) return res.json({ ok: true });
-  res.status(401).json({ error: 'PIN incorrecto' });
+  if (pin && String(pin).trim() === String(cfg.admin_pin).trim()) {
+    loginAttempts.delete(ip);
+    return res.json({ ok: true });
+  }
+
+  attempt.count++;
+  if (attempt.count >= 5) {
+    attempt.blockedUntil = now + 15 * 60 * 1000;
+    loginAttempts.set(ip, attempt);
+    return res.status(429).json({ error: 'Has fallado el PIN 5 veces. Acceso bloqueado por 15 minutos.' });
+  }
+
+  loginAttempts.set(ip, attempt);
+  const remainingAttempts = 5 - attempt.count;
+  res.status(401).json({ error: `PIN incorrecto. Te quedan ${remainingAttempts} intento(s) antes del bloqueo temporal.` });
 });
 
 // GET /api/admin/data
@@ -373,6 +458,25 @@ app.get('/api/admin/data', requireAdmin, (req, res) => {
       percentPaid: tables.length ? Math.round((totalPaid / tables.reduce((s, t) => s + t.total_numbers, 0)) * 100) : 0
     }
   });
+});
+
+// GET /api/admin/backup-json - Descargar respaldo completo en JSON
+app.get('/api/admin/backup-json', requireAdmin, (req, res) => {
+  const cfg = getConfig();
+  const tables = getTables();
+  const allNumbers = db.prepare('SELECT * FROM numbers ORDER BY table_id ASC, num ASC').all();
+
+  const backupData = {
+    exportedAt: new Date().toISOString(),
+    config: cfg,
+    tables: tables,
+    numbers: allNumbers
+  };
+
+  const filename = `dinero-express-backup-${new Date().toISOString().split('T')[0]}.json`;
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify(backupData, null, 2));
 });
 
 // POST /api/admin/add-table

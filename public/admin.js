@@ -43,6 +43,32 @@
   const filterAllCount = document.getElementById('filterAllCount');
   const filterResCount = document.getElementById('filterResCount');
   const filterPaidCount = document.getElementById('filterPaidCount');
+  const filterProofCount = document.getElementById('filterProofCount');
+  const btnDownloadBackup = document.getElementById('btnDownloadBackup');
+
+  let adminAudioCtx = null;
+  function playNotificationChime() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!adminAudioCtx) adminAudioCtx = new AudioCtx();
+      if (adminAudioCtx.state === 'suspended') adminAudioCtx.resume();
+
+      const now = adminAudioCtx.currentTime;
+      [880, 1318.5].forEach((freq, idx) => {
+        const osc = adminAudioCtx.createOscillator();
+        const gain = adminAudioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+        gain.gain.setValueAtTime(0.25, now + idx * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.35);
+        osc.connect(gain);
+        gain.connect(adminAudioCtx.destination);
+        osc.start(now + idx * 0.12);
+        osc.stop(now + idx * 0.12 + 0.35);
+      });
+    } catch {}
+  }
 
   // Lote masivo
   const batchActionBar = document.getElementById('batchActionBar');
@@ -496,6 +522,7 @@
     const filtered = buyers.filter(b => {
       if (activeFilter === 'reserved' && b.status !== 'reserved') return false;
       if (activeFilter === 'paid' && b.status !== 'paid') return false;
+      if (activeFilter === 'proof' && !b.proofImage) return false;
 
       if (query) {
         const numStr = String(b.num).padStart(2, '0');
@@ -508,10 +535,12 @@
 
     const resCount = buyers.filter(b => b.status === 'reserved').length;
     const paidCount = buyers.filter(b => b.status === 'paid').length;
+    const proofCount = buyers.filter(b => !!b.proofImage).length;
 
     filterAllCount.textContent = buyers.length;
     filterResCount.textContent = resCount;
     filterPaidCount.textContent = paidCount;
+    if (filterProofCount) filterProofCount.textContent = proofCount;
 
     if (filtered.length === 0) {
       buyersTableBody.innerHTML = `
@@ -1081,20 +1110,49 @@
     showToast('Descargando archivo Excel...', 'success');
   });
 
+  // Descargar Respaldo Completo JSON
+  if (btnDownloadBackup) {
+    btnDownloadBackup.addEventListener('click', () => {
+      window.location.href = `/api/admin/backup-json?pin=${encodeURIComponent(adminPin)}`;
+      showToast('Descargando copia de seguridad JSON...', 'success');
+    });
+  }
+
+  // Debounce SSE para alto tráfico
+  let adminSseDebounce = null;
+  function debouncedLoadAdminData() {
+    if (adminSseDebounce) clearTimeout(adminSseDebounce);
+    adminSseDebounce = setTimeout(() => {
+      loadAdminData();
+    }, 250);
+  }
+
   // SSE
   function connectSSE() {
     const es = new EventSource('/api/events');
-    es.addEventListener('numbers_updated', () => loadAdminData());
-    es.addEventListener('numbers_released', () => loadAdminData());
-    es.addEventListener('raffle_status_changed', () => loadAdminData());
-    es.addEventListener('winner_announced', () => loadAdminData());
-    es.addEventListener('config_updated', () => loadAdminData());
-    es.addEventListener('table_added', () => loadAdminData());
-    es.addEventListener('table_removed', () => loadAdminData());
+    es.addEventListener('numbers_updated', (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        if (d.action === 'reserved') {
+          playNotificationChime();
+          showToast(`🔔 ¡Nueva boleta apartada!`, 'info');
+        } else if (d.action === 'proof_uploaded') {
+          playNotificationChime();
+          showToast(`📸 ¡Nuevo comprobante de pago subido!`, 'success');
+        }
+      } catch {}
+      debouncedLoadAdminData();
+    });
+    es.addEventListener('numbers_released', () => debouncedLoadAdminData());
+    es.addEventListener('raffle_status_changed', () => debouncedLoadAdminData());
+    es.addEventListener('winner_announced', () => debouncedLoadAdminData());
+    es.addEventListener('config_updated', () => debouncedLoadAdminData());
+    es.addEventListener('table_added', () => debouncedLoadAdminData());
+    es.addEventListener('table_removed', () => debouncedLoadAdminData());
     es.addEventListener('raffle_reset', () => {
       selectedBatchNumbers.clear();
       currentAdminTableId = 1;
-      loadAdminData();
+      debouncedLoadAdminData();
       showToast('La rifa ha sido reiniciada.', 'info');
     });
     es.onerror = () => {};

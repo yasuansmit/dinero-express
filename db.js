@@ -5,6 +5,15 @@ const path = require('node:path');
 const dbPath = path.join(__dirname, 'raffle.db');
 const db = new DatabaseSync(dbPath);
 
+// Optimización de concurrencia para 150+ usuarios simultáneos (WAL Mode)
+try {
+  db.exec('PRAGMA journal_mode = WAL;');
+  db.exec('PRAGMA synchronous = NORMAL;');
+  db.exec('PRAGMA busy_timeout = 5000;');
+} catch (e) {
+  console.warn('Advertencia WAL:', e.message);
+}
+
 function initDB() {
   // 1. Tabla de Configuración Global
   db.exec(`
