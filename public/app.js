@@ -161,11 +161,10 @@
     tableTabsContainer.innerHTML = tablesData.filter(t => t.isActive).map(t => {
       const isActive = t.id === currentTableId;
       const freeCount = (t.numbers || []).filter(n => n.status === 'free').length;
-      return `<button class="btn-tool ${isActive ? 'active' : ''}" data-table-id="${t.id}" style="
-        padding: 8px 16px; font-size: 0.88rem; font-weight: 800; border-radius: 10px; white-space: nowrap;
-        ${isActive ? 'background: var(--nequi-pink); color: white; border-color: var(--nequi-pink);' : ''}
-      ">
-        📋 ${escapeHtml(t.name)} <span style="font-size:0.72rem; opacity:0.8;">(${freeCount} libres)</span>
+      return `<button class="table-tab-btn ${isActive ? 'active' : ''}" data-table-id="${t.id}">
+        <span>📋</span>
+        <span>${escapeHtml(t.name)}</span>
+        <span class="table-tab-pill">${freeCount} libres</span>
       </button>`;
     }).join('');
 
@@ -309,18 +308,42 @@
       if (selectionSummary) selectionSummary.textContent = count === 0 ? '0 seleccionados' : count === 1 ? '1 número elegido' : `${count} números elegidos`;
       if (btnClearSelection) btnClearSelection.style.display = count > 0 ? 'inline-flex' : 'none';
       if (count > 0) {
-        if (btnTopPay) { btnTopPay.disabled = false; btnTopPay.style.opacity = '1'; btnTopPay.style.cursor = 'pointer'; btnTopPay.textContent = `💳 PAGAR (${count})`; }
+        if (btnTopPay) { 
+          btnTopPay.disabled = false; 
+          btnTopPay.style.opacity = '1'; 
+          btnTopPay.style.cursor = 'pointer'; 
+          btnTopPay.textContent = `💳 PAGAR (${count})`; 
+          btnTopPay.classList.add('btn-glow-pulse');
+        }
         if (bottomBar) bottomBar.classList.remove('closed');
         if (barTotal) barTotal.textContent = formatCOP(total);
         if (barNumbers) barNumbers.textContent = numsFormatted;
-        if (btnInlineProceed) { btnInlineProceed.disabled = false; btnInlineProceed.style.opacity = '1'; btnInlineProceed.style.cursor = 'pointer'; btnInlineProceed.textContent = `💳 PAGAR ${formatCOP(total)} COP AHORA`; }
+        if (btnInlineProceed) { 
+          btnInlineProceed.disabled = false; 
+          btnInlineProceed.style.opacity = '1'; 
+          btnInlineProceed.style.cursor = 'pointer'; 
+          btnInlineProceed.textContent = `💳 PAGAR ${formatCOP(total)} COP AHORA`; 
+          btnInlineProceed.classList.add('btn-glow-pulse');
+        }
         if (inlineHelpText) inlineHelpText.textContent = '🎉 ¡Boletas listas! Toca el botón verde para pagar:';
         if (inlineNumsText) inlineNumsText.textContent = 'Boletas: ' + numsFormatted;
         if (inlineTotalText) inlineTotalText.textContent = `Total a transferir: ${formatCOP(total)} COP`;
       } else {
-        if (btnTopPay) { btnTopPay.disabled = true; btnTopPay.style.opacity = '0.55'; btnTopPay.style.cursor = 'not-allowed'; btnTopPay.textContent = '💳 PAGAR (0)'; }
+        if (btnTopPay) { 
+          btnTopPay.disabled = true; 
+          btnTopPay.style.opacity = '0.55'; 
+          btnTopPay.style.cursor = 'not-allowed'; 
+          btnTopPay.textContent = '💳 PAGAR (0)'; 
+          btnTopPay.classList.remove('btn-glow-pulse');
+        }
         if (bottomBar) bottomBar.classList.add('closed');
-        if (btnInlineProceed) { btnInlineProceed.disabled = true; btnInlineProceed.style.opacity = '0.6'; btnInlineProceed.style.cursor = 'not-allowed'; btnInlineProceed.textContent = '💳 PAGAR POR NEQUI AHORA'; }
+        if (btnInlineProceed) { 
+          btnInlineProceed.disabled = true; 
+          btnInlineProceed.style.opacity = '0.6'; 
+          btnInlineProceed.style.cursor = 'not-allowed'; 
+          btnInlineProceed.textContent = '💳 PAGAR POR NEQUI AHORA'; 
+          btnInlineProceed.classList.remove('btn-glow-pulse');
+        }
         if (inlineHelpText) inlineHelpText.textContent = '👆 Toca tus números favoritos arriba para pagar';
         if (inlineNumsText) inlineNumsText.textContent = 'Boletas: Ninguna seleccionada';
         if (inlineTotalText) inlineTotalText.textContent = 'Total: $0 COP';
