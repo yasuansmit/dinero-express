@@ -478,9 +478,25 @@
             <input class="field-input" type="text" id="cfgName" required>
           </div>
 
-          <div class="field-box">
-            <label class="field-label" for="cfgPrize">Detalle de Premios</label>
-            <input class="field-input" type="text" id="cfgPrize" required>
+          <div style="background: rgba(218, 0, 129, 0.08); border: 1.5px solid var(--nequi-pink); border-radius: 14px; padding: 14px; margin-bottom: 14px;">
+            <div style="font-size: 0.92rem; font-weight: 800; color: var(--nequi-pink); margin-bottom: 12px; display:flex; align-items:center; gap:6px;">
+              <span>🏆</span> <span>Configuración de los 3 Premios Oficiales</span>
+            </div>
+            
+            <div class="field-box" style="margin-bottom: 10px;">
+              <label class="field-label" for="cfgPrizeFirst">🥇 2 Primeras Cifras (Premio Inicial)</label>
+              <input class="field-input" type="text" id="cfgPrizeFirst" placeholder="Ej. $150.000 COP" required>
+            </div>
+
+            <div class="field-box" style="margin-bottom: 10px;">
+              <label class="field-label" for="cfgPrizeMiddle">🥈 2 Cifras del Medio</label>
+              <input class="field-input" type="text" id="cfgPrizeMiddle" placeholder="Ej. $150.000 COP" required>
+            </div>
+
+            <div class="field-box" style="margin-bottom: 0;">
+              <label class="field-label" for="cfgPrizeLast">🥉 2 Últimas Cifras (Premio Mayor)</label>
+              <input class="field-input" type="text" id="cfgPrizeLast" placeholder="Ej. $400.000 COP" required>
+            </div>
           </div>
 
           <div class="field-box">
@@ -569,6 +585,6 @@
     </div>
   </div>
 
-  <script src="admin.js?v=8.0"></script>
+  <script src="admin.js?v=9.0"></script>
 </body>
 </html>

@@ -154,7 +154,10 @@ app.get('/api/raffle', (req, res) => {
   res.json({
     config: {
       name: cfg.name,
-      prize: cfg.prize,
+      prize: cfg.prize_last || cfg.prize,
+      prizeFirst: cfg.prize_first || '$150.000 COP',
+      prizeMiddle: cfg.prize_middle || '$150.000 COP',
+      prizeLast: cfg.prize_last || cfg.prize || '$400.000 COP',
       lotteryName: cfg.lottery_name || 'Lotería Chontico',
       price: cfg.price,
       nequi: cfg.nequi,
@@ -443,7 +446,12 @@ app.get('/api/admin/data', requireAdmin, (req, res) => {
 
   res.json({
     config: {
-      name: cfg.name, prize: cfg.prize, lotteryName: cfg.lottery_name || 'Lotería Chontico',
+      name: cfg.name,
+      prize: cfg.prize_last || cfg.prize,
+      prizeFirst: cfg.prize_first || '$150.000 COP',
+      prizeMiddle: cfg.prize_middle || '$150.000 COP',
+      prizeLast: cfg.prize_last || cfg.prize || '$400.000 COP',
+      lotteryName: cfg.lottery_name || 'Lotería Chontico',
       price: cfg.price, nequi: cfg.nequi, totalNumbers: cfg.total_numbers,
       reserveMinutes: cfg.reserve_minutes, raffleStatus: cfg.raffle_status || 'active',
       winningNumber: cfg.winning_number,
@@ -731,13 +739,33 @@ app.get('/api/admin/whatsapp-templates', requireAdmin, (req, res) => {
 
 // PUT /api/admin/config
 app.put('/api/admin/config', requireAdmin, (req, res) => {
-  const { name, prize, lottery_name, price, nequi, admin_pin, reserve_minutes } = req.body;
+  const { name, prize, prizeFirst, prizeMiddle, prizeLast, lottery_name, price, nequi, admin_pin, reserve_minutes } = req.body;
   const current = getConfig();
+
+  const pFirst = (prizeFirst || current.prize_first || '$150.000 COP').trim();
+  const pMiddle = (prizeMiddle || current.prize_middle || '$150.000 COP').trim();
+  const pLast = (prizeLast || prize || current.prize_last || current.prize || '$400.000 COP').trim();
+
   db.prepare(`
-    UPDATE config SET name = ?, prize = ?, lottery_name = ?, price = ?, nequi = ?, admin_pin = ?, reserve_minutes = ?, updated_at = ?
+    UPDATE config SET 
+      name = ?, 
+      prize = ?, 
+      prize_first = ?, 
+      prize_middle = ?, 
+      prize_last = ?, 
+      lottery_name = ?, 
+      price = ?, 
+      nequi = ?, 
+      admin_pin = ?, 
+      reserve_minutes = ?, 
+      updated_at = ?
     WHERE id = 1
   `).run(
-    (name || current.name).trim(), (prize || current.prize).trim(),
+    (name || current.name).trim(),
+    pLast,
+    pFirst,
+    pMiddle,
+    pLast,
     (lottery_name || current.lottery_name || 'Lotería Chontico').trim(),
     parseInt(price, 10) || current.price,
     (nequi || current.nequi).replace(/\D/g, ''),

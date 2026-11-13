@@ -192,7 +192,14 @@
       if (modalFlyerImg) modalFlyerImg.src = config.flyerUrl;
     }
 
-    // Pozo del tabla actual
+    // Pozo y premios dinámicos
+    const heroPrizeFirst = document.getElementById('heroPrizeFirst');
+    const heroPrizeMiddle = document.getElementById('heroPrizeMiddle');
+    const heroPrizeLast = document.getElementById('heroPrizeLast');
+    if (heroPrizeFirst) heroPrizeFirst.textContent = config.prizeFirst || '$150.000 COP';
+    if (heroPrizeMiddle) heroPrizeMiddle.textContent = config.prizeMiddle || '$150.000 COP';
+    if (heroPrizeLast) heroPrizeLast.textContent = config.prizeLast || config.prize || '$400.000 COP';
+
     const ct = getCurrentTable();
     if (heroPozoAmount && ct) {
       heroPozoAmount.textContent = formatCOP(ct.pozoAmount);

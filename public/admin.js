@@ -79,7 +79,9 @@
 
   const configForm = document.getElementById('configForm');
   const cfgName = document.getElementById('cfgName');
-  const cfgPrize = document.getElementById('cfgPrize');
+  const cfgPrizeFirst = document.getElementById('cfgPrizeFirst');
+  const cfgPrizeMiddle = document.getElementById('cfgPrizeMiddle');
+  const cfgPrizeLast = document.getElementById('cfgPrizeLast');
   const cfgLottery = document.getElementById('cfgLottery');
   const cfgPrice = document.getElementById('cfgPrice');
   const cfgNequi = document.getElementById('cfgNequi');
@@ -427,7 +429,9 @@
       adminFlyerPreview.src = config.flyerUrl;
     }
     cfgName.value = config.name;
-    cfgPrize.value = config.prize;
+    if (cfgPrizeFirst) cfgPrizeFirst.value = config.prizeFirst || '$150.000 COP';
+    if (cfgPrizeMiddle) cfgPrizeMiddle.value = config.prizeMiddle || '$150.000 COP';
+    if (cfgPrizeLast) cfgPrizeLast.value = config.prizeLast || config.prize || '$400.000 COP';
     cfgLottery.value = config.lotteryName || 'Lotería Chontico Día y Noche';
     cfgPrice.value = config.price;
     cfgNequi.value = config.nequi;
@@ -763,7 +767,10 @@
 
     const payload = {
       name: cfgName.value.trim(),
-      prize: cfgPrize.value.trim(),
+      prizeFirst: cfgPrizeFirst ? cfgPrizeFirst.value.trim() : '$150.000 COP',
+      prizeMiddle: cfgPrizeMiddle ? cfgPrizeMiddle.value.trim() : '$150.000 COP',
+      prizeLast: cfgPrizeLast ? cfgPrizeLast.value.trim() : '$400.000 COP',
+      prize: cfgPrizeLast ? cfgPrizeLast.value.trim() : '$400.000 COP',
       lottery_name: cfgLottery.value.trim(),
       price: parseInt(cfgPrice.value, 10),
       nequi: cfgNequi.value.trim(),

@@ -45,6 +45,9 @@ function initDB() {
   try { db.exec('ALTER TABLE config ADD COLUMN winner_phone TEXT;'); } catch {}
   try { db.exec('ALTER TABLE config ADD COLUMN winners_json TEXT;'); } catch {}
   try { db.exec('ALTER TABLE config ADD COLUMN flyer_url TEXT NOT NULL DEFAULT "/img/dinero-express-flyer.jpg";'); } catch {}
+  try { db.exec('ALTER TABLE config ADD COLUMN prize_first TEXT NOT NULL DEFAULT "$150.000 COP";'); } catch {}
+  try { db.exec('ALTER TABLE config ADD COLUMN prize_middle TEXT NOT NULL DEFAULT "$150.000 COP";'); } catch {}
+  try { db.exec('ALTER TABLE config ADD COLUMN prize_last TEXT NOT NULL DEFAULT "$400.000 COP";'); } catch {}
 
   // 2. Tabla de Tablas (Multi-Tabla)
   db.exec(`
